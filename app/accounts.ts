@@ -8,6 +8,20 @@ export type AccountProfile = {
   active: boolean;
 };
 
+export function isAccountRole(value: unknown): value is AccountRole {
+  return value === "student" || value === "mentor" || value === "director";
+}
+
+export function initialsFor(displayName: string) {
+  return displayName
+    .trim()
+    .split(/\s+/)
+    .map((part) => part[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
+}
+
 export type FeedbackKind = "kudos" | "comment";
 
 export type SkillFeedback = {
