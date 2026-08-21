@@ -11,19 +11,26 @@ import {
   type Skill,
   type SkillStatus,
 } from "./data";
+import { accountRoleDetails, facultyDirectors, type AccountRole } from "./accounts";
 
-type Role = "student" | "mentor";
+type Role = AccountRole;
 type View = "overview" | "projects" | string;
 type BrandGuideId = "digital-corps" | "bsu-academics" | "bsu-athletics" | "tad";
-const STORAGE_KEY = "digital-corps-badge-tracker-preview-v1";
+const STORAGE_KEY = "digital-corps-badge-tracker-preview-v2";
 
 const defaultStatuses = Object.fromEntries(
-  allSkills.map((item) => [item.id, item.initialStatus ?? "not-started"]),
+  allSkills.map((item) => [item.id, "not-started"]),
 ) as Record<string, SkillStatus>;
 
 const defaultEndorsements = Object.fromEntries(
-  allSkills.map((item) => [item.id, item.initialEndorsements ?? 0]),
+  allSkills.map((item) => [item.id, 0]),
 ) as Record<string, number>;
+
+const rolePresentation: Record<Role, { initials: string; name: string; title: string }> = {
+  student: { initials: "ST", name: "Student workspace", title: "Mentee account not signed in" },
+  mentor: { initials: "MN", name: "Mentor workspace", title: "Mentor account not signed in" },
+  director: { initials: "FD", name: "Faculty Director workspace", title: "Accounts planned: Eric Carlson · Mitch Blessing" },
+};
 
 const iconForArea: Record<string, string> = {
   onboarding: "01",
@@ -248,10 +255,46 @@ function EndorsementStack({ count }: { count: number }) {
   if (!count) return <span className="no-endorsements">No endorsements yet</span>;
   return (
     <div className="endorsement-stack" aria-label={`${count} mentor endorsement${count === 1 ? "" : "s"}`}>
-      <span>MK</span>
-      {count > 1 ? <span>JT</span> : null}
+      <span aria-hidden="true">✓</span>
+      {count > 1 ? <span aria-hidden="true">✓</span> : null}
       {count > 2 ? <span>+{count - 2}</span> : null}
       <b>{count} endorsed</b>
+    </div>
+  );
+}
+
+function AccountAccessModal({ onClose }: { onClose: () => void }) {
+  useEffect(() => {
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", closeOnEscape);
+    return () => window.removeEventListener("keydown", closeOnEscape);
+  }, [onClose]);
+
+  return (
+    <div className="modal-backdrop" role="presentation" onMouseDown={onClose}>
+      <article className="account-modal" role="dialog" aria-modal="true" aria-labelledby="account-modal-title" onMouseDown={(event) => event.stopPropagation()}>
+        <header>
+          <div><span className="eyebrow">Account foundation</span><h2 id="account-modal-title">Real people, clearly defined roles.</h2></div>
+          <button className="close-button" onClick={onClose} aria-label="Close account information">×</button>
+        </header>
+        <p className="account-intro">This version saves progress only in this browser. The next connection will add secure sign-in, shared progress, review assignments, kudos, and comments.</p>
+        <div className="account-role-grid">
+          {(Object.entries(accountRoleDetails) as [Role, (typeof accountRoleDetails)[Role]][]).map(([id, detail], index) => (
+            <section key={id}>
+              <span>{String(index + 1).padStart(2, "0")}</span>
+              <h3>{detail.label}</h3>
+              <p>{detail.summary}</p>
+            </section>
+          ))}
+        </div>
+        <section className="director-roster">
+          <div><span className="eyebrow">Faculty director access</span><h3>Full program oversight</h3><p>Directors will be able to view student and mentor activity, give kudos, leave comments, and manage account roles.</p></div>
+          <ul>{facultyDirectors.map((director) => <li key={director.id}><span>{director.displayName.split(" ").map((part) => part[0]).join("")}</span><div><strong>{director.displayName}</strong><small>{director.title}</small></div></li>)}</ul>
+        </section>
+        <footer><span>Authentication and shared data are not active yet.</span><button className="primary-button" onClick={onClose}>Continue with local preview</button></footer>
+      </article>
     </div>
   );
 }
@@ -347,6 +390,7 @@ export default function Tracker() {
   const [selectedBrandGuide, setSelectedBrandGuide] = useState<BrandGuideId>("digital-corps");
   const [announcement, setAnnouncement] = useState("");
   const [syncState, setSyncState] = useState<"loading" | "saved" | "session">("loading");
+  const [accountOpen, setAccountOpen] = useState(false);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -452,7 +496,7 @@ export default function Tracker() {
 
   const endorse = (item: Skill) => {
     if (
-      role !== "mentor" ||
+      role === "student" ||
       sessionEndorsed.includes(item.id) ||
       !["ready", "complete"].includes(statuses[item.id])
     ) return;
@@ -466,8 +510,11 @@ export default function Tracker() {
 
   const switchRole = (next: Role) => {
     setRole(next);
-    setAnnouncement(`Previewing the ${next} experience.`);
+    setAnnouncement(`Previewing the ${accountRoleDetails[next].label.toLowerCase()} workspace.`);
   };
+
+  const activeRole = rolePresentation[role];
+  const reviewRole = role === "mentor" || role === "director";
 
   return (
     <div className="app-shell">
@@ -500,7 +547,7 @@ export default function Tracker() {
 
         <div className="sidebar-card">
           <span className="spark">✦</span>
-          <div><strong>Mentor tip</strong><p>Endorse the demonstrated skill, not just tutorial completion.</p></div>
+          <div><strong>{role === "director" ? "Director focus" : "Mentor tip"}</strong><p>{role === "director" ? "Use kudos for recognition and comments for useful next steps." : "Endorse the demonstrated skill, not just tutorial completion."}</p></div>
         </div>
 
         <p className="sidebar-foot">Digital Corps · Bemidji State University</p>
@@ -511,15 +558,16 @@ export default function Tracker() {
           <button className="mobile-brand" onClick={() => setActiveView("overview")} aria-label="Digital Corps home">
             <img src="./brand/digital-corps-symbol.png" alt="" />
           </button>
-          <div className="role-switch" aria-label="Preview role">
-            <span>Preview as</span>
+          <div className="role-switch" aria-label="Workspace role">
+            <span>Workspace</span>
             <button className={role === "student" ? "active" : ""} onClick={() => switchRole("student")}>Student</button>
             <button className={role === "mentor" ? "active" : ""} onClick={() => switchRole("mentor")}>Mentor</button>
+            <button className={role === "director" ? "active" : ""} onClick={() => switchRole("director")}>Director</button>
           </div>
-          <span className={`save-state save-${syncState}`}>{syncState === "loading" ? "Loading…" : syncState === "saved" ? "Saved locally" : "Session preview"}</span>
+          <span className={`save-state save-${syncState}`}>{syncState === "loading" ? "Loading…" : syncState === "saved" ? "Local preview" : "Session preview"}</span>
           <div className="topbar-actions">
-            <button className="notification" aria-label="Notifications"><span>2</span>●</button>
-            <div className="user-chip"><span>{role === "student" ? "AM" : "MK"}</span><div><strong>{role === "student" ? "Alex Morgan" : "Morgan Kim"}</strong><small>{role === "student" ? "Student mentee" : "Student mentor"}</small></div></div>
+            <button className="account-access-button" onClick={() => setAccountOpen(true)}>Account access</button>
+            <div className="user-chip"><span>{activeRole.initials}</span><div><strong>{activeRole.name}</strong><small>{activeRole.title}</small></div></div>
           </div>
         </header>
 
@@ -528,12 +576,12 @@ export default function Tracker() {
             <>
               <section className="hero-card">
                 <div className="hero-copy">
-                  <span className="eyebrow">{role === "student" ? "Your learning dashboard" : "Mentor endorsement desk"}</span>
-                  <h1>{role === "student" ? "Make progress visible." : "Recognize skills in action."}</h1>
-                  <p>{role === "student" ? "Work through tutorials, apply the skills in real projects, and request mentor review when you are ready." : "Review mentee progress and endorse the skills you have personally seen demonstrated."}</p>
+                  <span className="eyebrow">{role === "student" ? "Your learning dashboard" : role === "mentor" ? "Mentor endorsement desk" : "Faculty Director workspace"}</span>
+                  <h1>{role === "student" ? "Make progress visible." : role === "mentor" ? "Recognize skills in action." : "Guide the whole program."}</h1>
+                  <p>{role === "student" ? "Work through tutorials, apply the skills in real projects, and request mentor review when you are ready." : role === "mentor" ? "Review mentee progress and endorse the skills you have personally seen demonstrated." : "Support students and mentors with program-wide review, kudos, comments, and clear next steps."}</p>
                   <div className="hero-actions">
                     <button className="primary-button" onClick={() => setActiveView(role === "student" ? "content-creation" : "onboarding")}>
-                      {role === "student" ? "Continue learning" : `Review ${readyCount} ready skills`} <span>→</span>
+                      {role === "student" ? "Start learning" : readyCount ? `Review ${readyCount} ready skills` : "View learning paths"} <span>→</span>
                     </button>
                     <button className="secondary-button" onClick={() => setActiveView("projects")}>Browse projects</button>
                   </div>
@@ -548,21 +596,27 @@ export default function Tracker() {
                 <article><span className="stat-icon mint">✦</span><div><strong>{endorsementCount}</strong><span>Skill endorsements</span></div><small>from mentors</small></article>
               </section>
 
-              {role === "mentor" ? (
+              {reviewRole ? (
                 <section className="dashboard-section">
-                  <div className="section-title"><div><span className="eyebrow">Review queue</span><h2>Ready for your endorsement</h2></div><button onClick={() => setActiveView("content-creation")}>View all →</button></div>
-                  <div className="review-list">
-                    {allSkills.filter((item) => statuses[item.id] === "ready").slice(0, 5).map((item) => (
-                      <article key={item.id}>
-                        <div className="student-avatar">AM</div>
-                        <div className="review-copy"><strong>{item.title}</strong><span>Alex Morgan · {item.group}</span></div>
-                        <span className="ready-pill">Ready for review</span>
-                        <button className={sessionEndorsed.includes(item.id) ? "endorsed" : "endorse-button"} onClick={() => endorse(item)}>
-                          {sessionEndorsed.includes(item.id) ? "Endorsed ✓" : "Endorse skill"}
-                        </button>
-                      </article>
-                    ))}
-                  </div>
+                  <div className="section-title"><div><span className="eyebrow">Review queue</span><h2>{role === "director" ? "Program feedback and recognition" : "Ready for your endorsement"}</h2></div>{readyCount ? <button onClick={() => setActiveView("content-creation")}>View all →</button> : null}</div>
+                  {readyCount ? (
+                    <div className="review-list">
+                      {allSkills.filter((item) => statuses[item.id] === "ready").slice(0, 5).map((item) => (
+                        <article key={item.id}>
+                          <div className="student-avatar">LP</div>
+                          <div className="review-copy"><strong>{item.title}</strong><span>Local learner preview · {item.group}</span></div>
+                          <span className="ready-pill">Ready for review</span>
+                          <button className={sessionEndorsed.includes(item.id) ? "endorsed" : "endorse-button"} onClick={() => endorse(item)}>
+                            {sessionEndorsed.includes(item.id) ? "Endorsed ✓" : role === "director" ? "Give kudos" : "Endorse skill"}
+                          </button>
+                        </article>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="account-empty-state">
+                      <span>◎</span><div><strong>No mentees are connected yet</strong><p>Secure accounts will populate this queue with real review requests. Faculty Directors will also be able to give kudos and leave comments.</p></div><button onClick={() => setAccountOpen(true)}>See account roles →</button>
+                    </div>
+                  )}
                 </section>
               ) : (
                 <section className="dashboard-section">
@@ -634,7 +688,7 @@ export default function Tracker() {
                           </button>
                         ) : (
                           <button className={isEndorsed ? "endorsed" : canEndorse ? "endorse-button" : "awaiting-button"} onClick={() => endorse(item)} disabled={isEndorsed || !canEndorse}>
-                            {isEndorsed ? "Endorsed ✓" : canEndorse ? "Endorse skill" : "Awaiting review"}
+                            {isEndorsed ? "Endorsed ✓" : canEndorse ? role === "director" ? "Give kudos" : "Endorse skill" : "Awaiting review"}
                           </button>
                         )}
                       </div>
@@ -891,6 +945,7 @@ export default function Tracker() {
 
       <p className="sr-only" aria-live="polite">{announcement}</p>
       {project ? <ProjectModal project={project} onClose={() => setProject(null)} /> : null}
+      {accountOpen ? <AccountAccessModal onClose={() => setAccountOpen(false)} /> : null}
     </div>
   );
 }
