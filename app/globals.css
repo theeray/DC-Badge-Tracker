@@ -355,6 +355,22 @@ input:focus-visible {
   gap: 18px;
 }
 
+.account-access-button {
+  min-height: 36px;
+  border: 1px solid var(--green);
+  border-radius: 8px;
+  background: white;
+  color: var(--green);
+  cursor: pointer;
+  font-size: 10px;
+  font-weight: 900;
+  padding: 0 13px;
+}
+
+.account-access-button:hover {
+  background: var(--soft-green);
+}
+
 .notification {
   position: relative;
   border: 0;
@@ -827,6 +843,53 @@ input:focus-visible {
 
 .review-list article + article {
   border-top: 1px solid var(--line);
+}
+
+.account-empty-state {
+  display: grid;
+  min-height: 150px;
+  grid-template-columns: 48px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 18px;
+  border: 1px dashed var(--mint);
+  border-radius: 14px;
+  background: var(--soft-green);
+  padding: 24px;
+}
+
+.account-empty-state > span {
+  display: grid;
+  width: 48px;
+  height: 48px;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--green);
+  color: white;
+  font-size: 21px;
+  font-weight: 900;
+}
+
+.account-empty-state strong {
+  color: var(--green);
+  font-size: 17px;
+}
+
+.account-empty-state p {
+  max-width: 670px;
+  margin: 6px 0 0;
+  color: var(--muted);
+  font-family: Georgia, serif;
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.account-empty-state button {
+  border: 0;
+  background: transparent;
+  color: var(--green);
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 900;
 }
 
 .student-avatar {
@@ -2124,6 +2187,159 @@ input:focus-visible {
   box-shadow: 0 28px 90px rgb(0 0 0 / 35%);
 }
 
+.account-modal {
+  width: min(880px, 100%);
+  max-height: calc(100vh - 56px);
+  overflow-y: auto;
+  border-radius: 18px;
+  background: white;
+  box-shadow: 0 28px 90px rgb(0 0 0 / 35%);
+  padding: 36px 40px 32px;
+}
+
+.account-modal > header {
+  position: relative;
+  padding-right: 50px;
+}
+
+.account-modal h2 {
+  margin: 8px 0 0;
+  color: var(--green);
+  font-family: "Arial Black", Arial, sans-serif;
+  font-size: clamp(30px, 5vw, 46px);
+  line-height: 1.02;
+  letter-spacing: -0.05em;
+}
+
+.account-modal .close-button {
+  border-color: var(--line);
+  background: var(--paper);
+  color: var(--green);
+}
+
+.account-intro {
+  max-width: 720px;
+  margin: 18px 0 24px;
+  color: var(--muted);
+  font-family: Georgia, serif;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.account-role-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+
+.account-role-grid section {
+  min-height: 170px;
+  border: 1px solid var(--line);
+  border-radius: 13px;
+  background: var(--paper);
+  padding: 20px;
+}
+
+.account-role-grid section > span {
+  color: var(--orange);
+  font-size: 10px;
+  font-weight: 900;
+}
+
+.account-role-grid h3 {
+  margin: 28px 0 8px;
+  color: var(--green);
+  font-size: 16px;
+}
+
+.account-role-grid p,
+.director-roster p {
+  margin: 0;
+  color: var(--muted);
+  font-family: Georgia, serif;
+  font-size: 11px;
+  line-height: 1.55;
+}
+
+.director-roster {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 290px;
+  gap: 28px;
+  margin-top: 14px;
+  border-radius: 14px;
+  background: var(--green);
+  color: white;
+  padding: 24px;
+}
+
+.director-roster h3 {
+  margin: 8px 0;
+  font-size: 20px;
+}
+
+.director-roster p {
+  color: rgb(255 255 255 / 70%);
+}
+
+.director-roster ul {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.director-roster li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid rgb(255 255 255 / 14%);
+  border-radius: 10px;
+  background: rgb(255 255 255 / 7%);
+  padding: 10px;
+}
+
+.director-roster li > span {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--mint);
+  color: var(--dark-green);
+  font-size: 10px;
+  font-weight: 900;
+}
+
+.director-roster li div {
+  display: flex;
+  flex-direction: column;
+}
+
+.director-roster li strong {
+  font-size: 11px;
+}
+
+.director-roster li small {
+  margin-top: 2px;
+  color: rgb(255 255 255 / 55%);
+  font-size: 9px;
+}
+
+.account-modal > footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 24px;
+}
+
+.account-modal > footer > span {
+  color: var(--muted);
+  font-family: Georgia, serif;
+  font-size: 10px;
+}
+
 .project-modal-header {
   position: relative;
   display: flex;
@@ -2495,6 +2711,7 @@ input:focus-visible {
 
   .user-chip div,
   .notification,
+  .account-access-button,
   .save-state {
     display: none;
   }
@@ -2557,6 +2774,15 @@ input:focus-visible {
 
   .review-list article {
     grid-template-columns: 38px minmax(0, 1fr) auto;
+  }
+
+  .account-empty-state {
+    grid-template-columns: 48px 1fr;
+  }
+
+  .account-empty-state button {
+    grid-column: 2;
+    justify-self: start;
   }
 
   .ready-pill {
@@ -2643,6 +2869,20 @@ input:focus-visible {
   .brand-guide-hero.guide-tad img {
     width: 250px;
     height: 105px;
+  }
+
+  .account-modal {
+    padding: 30px 24px 24px;
+  }
+
+  .account-role-grid,
+  .director-roster {
+    grid-template-columns: 1fr;
+  }
+
+  .account-modal > footer {
+    align-items: stretch;
+    flex-direction: column;
   }
 
   .athletics-reserve-mark {
@@ -2941,7 +3181,7 @@ input:focus-visible {
 /* Final phone overrides sit last so the reading scale wins the cascade. */
 @media (max-width: 760px) {
   .topbar { min-height: 72px; }
-  .role-switch button { min-height: 44px; padding: 9px 14px; font-size: 16px; }
+  .role-switch button { min-height: 44px; padding: 9px 10px; font-size: 14px; }
   .content-wrap { padding: 24px 16px 126px; }
   .eyebrow { font-size: 14px; }
 
@@ -2997,6 +3237,18 @@ input:focus-visible {
   .endorse-button,
   .endorsed,
   .awaiting-button { min-height: 48px; font-size: 15px; }
+  .account-empty-state { min-height: 240px; padding: 22px; }
+  .account-empty-state strong { font-size: 22px; }
+  .account-empty-state p { font-size: 17px; }
+  .account-empty-state button { font-size: 16px; }
+  .account-intro { font-size: 17px; }
+  .account-role-grid section { min-height: 190px; padding: 24px; }
+  .account-role-grid h3 { font-size: 23px; }
+  .account-role-grid p,
+  .director-roster p { font-size: 16px; }
+  .director-roster h3 { font-size: 24px; }
+  .director-roster li strong { font-size: 16px; }
+  .director-roster li small { font-size: 14px; }
 
   .track-heading h1 { font-size: 46px; line-height: 1.05; }
   .track-count strong,
