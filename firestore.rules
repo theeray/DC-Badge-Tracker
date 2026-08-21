@@ -1,0 +1,88 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function currentProfile() {
+      return get(/databases/$(database)/documents/profiles/$(request.auth.uid)).data;
+    }
+
+    function activeAccount() {
+      return signedIn()
+        && currentProfile().active == true
+        && currentProfile().role in ['student', 'mentor', 'director'];
+    }
+
+    function isDirector() {
+      return activeAccount() && currentProfile().role == 'director';
+    }
+
+    function isMentor() {
+      return activeAccount() && currentProfile().role == 'mentor';
+    }
+
+    function isAssignedMentor(studentId) {
+      return isMentor()
+        && exists(/databases/$(database)/documents/assignments/$(studentId))
+        && request.auth.uid in get(/databases/$(database)/documents/assignments/$(studentId)).data.mentorIds;
+    }
+
+    function canReview(studentId) {
+      return isDirector() || isAssignedMentor(studentId);
+    }
+
+    match /profiles/{userId} {
+      allow get: if signedIn()
+        && (request.auth.uid == userId || isDirector() || isAssignedMentor(userId));
+      allow list: if isDirector();
+      allow create, update, delete: if isDirector();
+    }
+
+    match /assignments/{studentId} {
+      allow read: if activeAccount()
+        && (request.auth.uid == studentId
+          || isDirector()
+          || (isMentor() && request.auth.uid in resource.data.mentorIds));
+      allow create, update, delete: if isDirector();
+    }
+
+    match /progress/{studentId} {
+      allow read: if activeAccount()
+        && (request.auth.uid == studentId || canReview(studentId));
+      allow create, update: if activeAccount()
+        && request.auth.uid == studentId
+        && request.resource.data.ownerId == studentId
+        && request.resource.data.keys().hasOnly(['ownerId', 'statuses', 'updatedAt']);
+      allow delete: if activeAccount()
+        && (request.auth.uid == studentId || isDirector());
+    }
+
+    match /feedback/{feedbackId} {
+      allow read: if activeAccount()
+        && (request.auth.uid == resource.data.authorId
+          || request.auth.uid == resource.data.recipientId
+          || canReview(resource.data.recipientId));
+      allow create: if activeAccount()
+        && request.resource.data.authorId == request.auth.uid
+        && request.resource.data.kind in ['kudos', 'comment']
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.keys().hasOnly([
+          'authorId',
+          'recipientId',
+          'skillId',
+          'kind',
+          'message',
+          'createdAt'
+        ])
+        && canReview(request.resource.data.recipientId);
+      allow update, delete: if false;
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

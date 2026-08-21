@@ -1,0 +1,20 @@
+[
+  {
+    "displayName": "Student Name",
+    "email": "student@example.edu",
+    "role": "student",
+    "title": "Student Mentee"
+  },
+  {
+    "displayName": "Mentor Name",
+    "email": "mentor@example.edu",
+    "role": "mentor",
+    "title": "Student Mentor"
+  },
+  {
+    "displayName": "Director Name",
+    "email": "director@example.edu",
+    "role": "director",
+    "title": "Faculty Director"
+  }
+]

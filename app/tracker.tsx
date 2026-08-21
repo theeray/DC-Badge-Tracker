@@ -11,7 +11,8 @@ import {
   type Skill,
   type SkillStatus,
 } from "./data";
-import { accountRoleDetails, facultyDirectors, type AccountRole } from "./accounts";
+import { accountRoleDetails, facultyDirectors, initialsFor, type AccountRole } from "./accounts";
+import { type AccountSessionController, useAccountSession } from "./use-account";
 
 type Role = AccountRole;
 type View = "overview" | "projects" | string;
@@ -263,7 +264,10 @@ function EndorsementStack({ count }: { count: number }) {
   );
 }
 
-function AccountAccessModal({ onClose }: { onClose: () => void }) {
+function AccountAccessModal({ account, onClose }: { account: AccountSessionController; onClose: () => void }) {
+  const [email, setEmail] = useState(account.email ?? "");
+  const [password, setPassword] = useState("");
+
   useEffect(() => {
     const closeOnEscape = (event: KeyboardEvent) => {
       if (event.key === "Escape") onClose();
@@ -272,14 +276,56 @@ function AccountAccessModal({ onClose }: { onClose: () => void }) {
     return () => window.removeEventListener("keydown", closeOnEscape);
   }, [onClose]);
 
+  const submitSignIn = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    await account.signIn(email, password);
+    setPassword("");
+  };
+
   return (
     <div className="modal-backdrop" role="presentation" onMouseDown={onClose}>
       <article className="account-modal" role="dialog" aria-modal="true" aria-labelledby="account-modal-title" onMouseDown={(event) => event.stopPropagation()}>
         <header>
-          <div><span className="eyebrow">Account foundation</span><h2 id="account-modal-title">Real people, clearly defined roles.</h2></div>
+          <div><span className="eyebrow">Invite-only access</span><h2 id="account-modal-title">{account.profile ? "Your Digital Corps account." : "Sign in to your workspace."}</h2></div>
           <button className="close-button" onClick={onClose} aria-label="Close account information">×</button>
         </header>
-        <p className="account-intro">This version saves progress only in this browser. The next connection will add secure sign-in, shared progress, review assignments, kudos, and comments.</p>
+
+        {!account.configured ? (
+          <section className="account-connection-state">
+            <span aria-hidden="true">◎</span>
+            <div><strong>Firebase connection pending</strong><p>The sign-in interface and role protections are ready. A Faculty Director must connect the private Firebase project before invited accounts can sign in.</p></div>
+          </section>
+        ) : account.loading ? (
+          <section className="account-connection-state" aria-live="polite">
+            <span className="account-spinner" aria-hidden="true" />
+            <div><strong>Checking account access</strong><p>Confirming your invitation and assigned role.</p></div>
+          </section>
+        ) : account.profile ? (
+          <section className="signed-in-account">
+            <span>{initialsFor(account.profile.displayName)}</span>
+            <div><small>Signed in as</small><strong>{account.profile.displayName}</strong><p>{account.profile.title} · {account.email}</p></div>
+            <b>{accountRoleDetails[account.profile.role].label}</b>
+          </section>
+        ) : (
+          <form className="account-sign-in" onSubmit={submitSignIn}>
+            <p className="account-intro">Accounts are created by a Faculty Director. There is no public registration form.</p>
+            <label>
+              <span>Email address</span>
+              <input type="email" autoComplete="username" value={email} onChange={(event) => { setEmail(event.target.value); account.clearNotice(); }} required />
+            </label>
+            <label>
+              <span>Password</span>
+              <input type="password" autoComplete="current-password" value={password} onChange={(event) => { setPassword(event.target.value); account.clearNotice(); }} required />
+            </label>
+            <div className="account-form-actions">
+              <button className="primary-button" type="submit" disabled={account.busy}>{account.busy ? "Working…" : "Sign in"}</button>
+              <button className="password-reset-button" type="button" disabled={account.busy} onClick={() => account.requestPasswordReset(email)}>Set or reset password</button>
+            </div>
+          </form>
+        )}
+
+        {account.notice ? <p className={`account-notice ${account.notice.kind}`} role={account.notice.kind === "error" ? "alert" : "status"}>{account.notice.message}</p> : null}
+
         <div className="account-role-grid">
           {(Object.entries(accountRoleDetails) as [Role, (typeof accountRoleDetails)[Role]][]).map(([id, detail], index) => (
             <section key={id}>
@@ -290,10 +336,15 @@ function AccountAccessModal({ onClose }: { onClose: () => void }) {
           ))}
         </div>
         <section className="director-roster">
-          <div><span className="eyebrow">Faculty director access</span><h3>Full program oversight</h3><p>Directors will be able to view student and mentor activity, give kudos, leave comments, and manage account roles.</p></div>
+          <div><span className="eyebrow">Faculty director access</span><h3>Full program oversight</h3><p>Directors can view student and mentor activity, give kudos, leave comments, and manage account roles.</p></div>
           <ul>{facultyDirectors.map((director) => <li key={director.id}><span>{director.displayName.split(" ").map((part) => part[0]).join("")}</span><div><strong>{director.displayName}</strong><small>{director.title}</small></div></li>)}</ul>
         </section>
-        <footer><span>Authentication and shared data are not active yet.</span><button className="primary-button" onClick={onClose}>Continue with local preview</button></footer>
+        <footer>
+          <span>{account.profile ? "Progress remains local until shared progress is enabled." : "Only pre-created Firebase accounts can sign in."}</span>
+          {account.profile
+            ? <button className="secondary-button" onClick={account.signOut} disabled={account.busy}>Sign out</button>
+            : <button className="primary-button" onClick={onClose}>Continue with local preview</button>}
+        </footer>
       </article>
     </div>
   );
@@ -379,6 +430,7 @@ function ProjectModal({ project, onClose }: { project: ProjectBrief; onClose: ()
 }
 
 export default function Tracker() {
+  const account = useAccountSession();
   const [role, setRole] = useState<Role>("student");
   const [view, setView] = useState<View>("overview");
   const [statuses, setStatuses] = useState<Record<string, SkillStatus>>(defaultStatuses);
@@ -391,6 +443,11 @@ export default function Tracker() {
   const [announcement, setAnnouncement] = useState("");
   const [syncState, setSyncState] = useState<"loading" | "saved" | "session">("loading");
   const [accountOpen, setAccountOpen] = useState(false);
+
+  useEffect(() => {
+    if (account.profile) setRole(account.profile.role);
+    else if (!account.loading) setRole("student");
+  }, [account.loading, account.profile]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -509,11 +566,18 @@ export default function Tracker() {
   };
 
   const switchRole = (next: Role) => {
+    if (account.profile) return;
     setRole(next);
     setAnnouncement(`Previewing the ${accountRoleDetails[next].label.toLowerCase()} workspace.`);
   };
 
-  const activeRole = rolePresentation[role];
+  const activeRole = account.profile
+    ? {
+        initials: initialsFor(account.profile.displayName),
+        name: account.profile.displayName,
+        title: account.profile.title,
+      }
+    : rolePresentation[role];
   const reviewRole = role === "mentor" || role === "director";
 
   return (
@@ -558,15 +622,19 @@ export default function Tracker() {
           <button className="mobile-brand" onClick={() => setActiveView("overview")} aria-label="Digital Corps home">
             <img src="./brand/digital-corps-symbol.png" alt="" />
           </button>
-          <div className="role-switch" aria-label="Workspace role">
-            <span>Workspace</span>
-            <button className={role === "student" ? "active" : ""} onClick={() => switchRole("student")}>Student</button>
-            <button className={role === "mentor" ? "active" : ""} onClick={() => switchRole("mentor")}>Mentor</button>
-            <button className={role === "director" ? "active" : ""} onClick={() => switchRole("director")}>Director</button>
-          </div>
-          <span className={`save-state save-${syncState}`}>{syncState === "loading" ? "Loading…" : syncState === "saved" ? "Local preview" : "Session preview"}</span>
+          {account.profile ? (
+            <div className="role-switch authenticated-role" aria-label="Authenticated workspace"><span>Workspace</span><strong>{accountRoleDetails[account.profile.role].label}</strong></div>
+          ) : (
+            <div className="role-switch" aria-label="Preview workspace role">
+              <span>Preview</span>
+              <button className={role === "student" ? "active" : ""} onClick={() => switchRole("student")}>Student</button>
+              <button className={role === "mentor" ? "active" : ""} onClick={() => switchRole("mentor")}>Mentor</button>
+              <button className={role === "director" ? "active" : ""} onClick={() => switchRole("director")}>Director</button>
+            </div>
+          )}
+          <span className={`save-state ${account.profile ? "save-authenticated" : `save-${syncState}`}`}>{account.profile ? "Signed in · progress local" : syncState === "loading" ? "Loading…" : syncState === "saved" ? "Local preview" : "Session preview"}</span>
           <div className="topbar-actions">
-            <button className="account-access-button" onClick={() => setAccountOpen(true)}>Account access</button>
+            <button className="account-access-button" onClick={() => setAccountOpen(true)}>{account.profile ? "Account" : "Sign in"}</button>
             <div className="user-chip"><span>{activeRole.initials}</span><div><strong>{activeRole.name}</strong><small>{activeRole.title}</small></div></div>
           </div>
         </header>
@@ -945,7 +1013,7 @@ export default function Tracker() {
 
       <p className="sr-only" aria-live="polite">{announcement}</p>
       {project ? <ProjectModal project={project} onClose={() => setProject(null)} /> : null}
-      {accountOpen ? <AccountAccessModal onClose={() => setAccountOpen(false)} /> : null}
+      {accountOpen ? <AccountAccessModal account={account} onClose={() => setAccountOpen(false)} /> : null}
     </div>
   );
 }
