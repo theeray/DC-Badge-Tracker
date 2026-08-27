@@ -1,0 +1,146 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function verifiedEmail() {
+      return signedIn()
+        && request.auth.token.email is string
+        && request.auth.token.email_verified == true;
+    }
+
+    function userPath(uid) {
+      return /databases/$(database)/documents/users/$(uid);
+    }
+
+    function approvalPath(email) {
+      return /databases/$(database)/documents/approvedUsers/$(email);
+    }
+
+    function hasProfile() {
+      return signedIn() && exists(userPath(request.auth.uid));
+    }
+
+    function currentUser() {
+      return get(userPath(request.auth.uid)).data;
+    }
+
+    function activeUser() {
+      return hasProfile()
+        && currentUser().active == true
+        && currentUser().role in ['mentee', 'mentor', 'director'];
+    }
+
+    function isMentee() {
+      return activeUser() && currentUser().role == 'mentee';
+    }
+
+    function isMentor() {
+      return activeUser() && currentUser().role == 'mentor';
+    }
+
+    function isDirector() {
+      return activeUser() && currentUser().role == 'director';
+    }
+
+    function approvedForSelf() {
+      return verifiedEmail()
+        && exists(approvalPath(request.auth.token.email))
+        && get(approvalPath(request.auth.token.email)).data.active == true;
+    }
+
+    match /approvedUsers/{email} {
+      allow get: if verifiedEmail()
+        && (request.auth.token.email == email || isDirector());
+      allow list, create, update, delete: if isDirector();
+    }
+
+    match /users/{uid} {
+      allow get: if activeUser()
+        && (request.auth.uid == uid || isMentor() || isDirector());
+      allow list: if isMentor() || isDirector();
+
+      allow create: if signedIn()
+        && request.auth.uid == uid
+        && approvedForSelf()
+        && request.resource.data.email == request.auth.token.email
+        && request.resource.data.displayName is string
+        && request.resource.data.role == get(approvalPath(request.auth.token.email)).data.role
+        && request.resource.data.active == true
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.updatedAt == request.time
+        && request.resource.data.keys().hasOnly([
+          'displayName',
+          'email',
+          'role',
+          'active',
+          'createdAt',
+          'updatedAt'
+        ]);
+
+      allow update: if isDirector()
+        || (activeUser()
+          && request.auth.uid == uid
+          && request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['displayName', 'updatedAt'])
+          && request.resource.data.updatedAt == request.time);
+      allow delete: if isDirector();
+    }
+
+    match /progress/{menteeId} {
+      allow read: if activeUser()
+        && (request.auth.uid == menteeId || isMentor() || isDirector());
+
+      allow create, update: if isDirector()
+        || (isMentee()
+          && request.auth.uid == menteeId
+          && request.resource.data.ownerId == menteeId
+          && request.resource.data.statuses is map
+          && request.resource.data.updatedAt == request.time
+          && request.resource.data.keys().hasOnly([
+            'ownerId',
+            'statuses',
+            'updatedAt'
+          ]));
+
+      allow delete: if isDirector()
+        || (isMentee() && request.auth.uid == menteeId);
+    }
+
+    match /endorsements/{endorsementId} {
+      allow read: if activeUser()
+        && (request.auth.uid == resource.data.menteeId || isMentor() || isDirector());
+
+      allow create: if isMentor()
+        && request.resource.data.mentorId == request.auth.uid
+        && request.resource.data.mentorName is string
+        && request.resource.data.menteeId is string
+        && request.resource.data.skillId is string
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.keys().hasOnly([
+          'menteeId',
+          'skillId',
+          'mentorId',
+          'mentorName',
+          'createdAt'
+        ])
+        && exists(userPath(request.resource.data.menteeId))
+        && get(userPath(request.resource.data.menteeId)).data.active == true
+        && get(userPath(request.resource.data.menteeId)).data.role == 'mentee'
+        && exists(/databases/$(database)/documents/progress/$(request.resource.data.menteeId))
+        && get(/databases/$(database)/documents/progress/$(request.resource.data.menteeId))
+          .data.statuses[request.resource.data.skillId] in ['ready', 'complete'];
+
+      allow update: if false;
+      allow delete: if isDirector()
+        || (isMentor() && resource.data.mentorId == request.auth.uid);
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
