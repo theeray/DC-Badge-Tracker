@@ -1,41 +1,45 @@
 # Digital Corps Badge Tracker
 
-A responsive learning and mentor-endorsement workspace for Digital Corps at Bemidji State University.
+A role-based learning tracker for Digital Corps mentees, mentors, and faculty directors.
 
-Created and directed by **Eric Carlson**, with AI-assisted development and implementation.
+## Production behavior
 
-## Live site
+- Approved users create their own Firebase email/password account with their institutional email.
+- Email verification is required before an approved role is activated.
+- Mentees update only their own progress.
+- Mentors can view mentee progress and add or remove their own skill endorsements, but cannot change progress.
+- Faculty directors approve accounts, assign roles, pause access, and administer records.
+- The public curriculum and brand resources remain available in guest mode.
 
-[Open the Digital Corps Badge Tracker](https://theeray.github.io/DC-Badge-Tracker/)
-
-## What it includes
-
-- Student and mentor views
-- Progress tracking saved locally in the browser
-- Skill pathways and tutorial links
-- Practice project briefs and supplied asset downloads
-- Digital Corps, BSU, BSU Athletics, and TAD brand resources
-- Responsive desktop, tablet, and mobile layouts
-
-## Run locally
-
-Requirements: Node.js 22.13 or newer.
+## Local development
 
 ```bash
-npm ci
+npm install
 npm run dev
 ```
 
-Create a production build with:
+The Sites build can be checked with:
 
 ```bash
-npm run build:pages
+npm run build
+npm test
 ```
 
-The repository publishes automatically through GitHub Actions after changes reach `main`.
+The standalone Firebase Hosting build can be checked with:
 
-## Data note
+```bash
+npm run typecheck:firebase
+npm run build:firebase
+```
 
-The published tracker currently stores progress and preview endorsements in the visitor's browser. Clearing browser storage resets that local state.
+## Firebase deployment
 
-The account foundation defines three real roles—student mentee, student mentor, and faculty director—and reserves faculty-director access for Eric Carlson and Mitch Blessing. Secure authentication and shared data are the next implementation phase; they will enable real review assignments, persistent kudos, and comments without presenting local browser data as an account.
+This repository targets the Firebase project `digital-corps-badge-tracker`.
+
+```bash
+npm run deploy:firebase
+```
+
+The deploy command builds the static app, then publishes Firebase Hosting, Firestore rules, and Firestore indexes. Account approval records are operational data and are intentionally not committed to this public repository.
+
+See [`firebase/README.md`](firebase/README.md) for the production activation and pilot-test checklist.
