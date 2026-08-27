@@ -25,6 +25,7 @@ import {
   setDoc,
   updateDoc,
   where,
+  writeBatch,
   type DocumentData,
   type Unsubscribe,
 } from "firebase/firestore";
@@ -272,6 +273,7 @@ export async function addEndorsement(
     mentorName: mentor.displayName,
     createdAt: serverTimestamp(),
   });
+  return id;
 }
 
 export async function removeEndorsement(id: string) {
@@ -370,8 +372,46 @@ export async function updateActivatedUser(
   );
 }
 
-export async function clearMenteeProgress(menteeId: string) {
-  await deleteDoc(doc(db, "progress", menteeId));
+export function watchProgressBackups(
+  onChange: (menteeIds: Set<string>) => void,
+  onError: (message: string) => void,
+) {
+  return onSnapshot(
+    collection(db, "progressBackups"),
+    (snapshot) => onChange(new Set(snapshot.docs.map((item) => item.id))),
+    (error) => onError(readableFirebaseError(error)),
+  );
+}
+
+export async function resetMenteeProgress(menteeId: string) {
+  const progressReference = doc(db, "progress", menteeId);
+  const backupReference = doc(db, "progressBackups", menteeId);
+  const snapshot = await getDoc(progressReference);
+  const batch = writeBatch(db);
+  batch.set(backupReference, {
+    ownerId: menteeId,
+    statuses: snapshot.exists() ? (snapshot.data().statuses ?? {}) : {},
+    backedUpAt: serverTimestamp(),
+  });
+  batch.delete(progressReference);
+  await batch.commit();
+}
+
+export async function restoreMenteeProgress(menteeId: string) {
+  const progressReference = doc(db, "progress", menteeId);
+  const backupReference = doc(db, "progressBackups", menteeId);
+  const snapshot = await getDoc(backupReference);
+  if (!snapshot.exists()) {
+    throw new Error("No saved progress backup is available for this member.");
+  }
+  const batch = writeBatch(db);
+  batch.set(progressReference, {
+    ownerId: menteeId,
+    statuses: snapshot.data().statuses ?? {},
+    updatedAt: serverTimestamp(),
+  });
+  batch.delete(backupReference);
+  await batch.commit();
 }
 
 export function readableFirebaseError(error: unknown) {
