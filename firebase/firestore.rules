@@ -110,6 +110,10 @@ service cloud.firestore {
         || (isMentee() && request.auth.uid == menteeId);
     }
 
+    match /progressBackups/{menteeId} {
+      allow read, create, update, delete: if isDirector();
+    }
+
     match /endorsements/{endorsementId} {
       allow read: if activeUser()
         && (request.auth.uid == resource.data.menteeId || isMentor() || isDirector());
