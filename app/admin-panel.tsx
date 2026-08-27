@@ -2,12 +2,14 @@
 
 import { useEffect, useMemo, useState } from "react";
 import {
-  clearMenteeProgress,
   readableFirebaseError,
+  resetMenteeProgress,
+  restoreMenteeProgress,
   saveApprovedUser,
   updateActivatedUser,
   watchAllUsers,
   watchApprovedUsers,
+  watchProgressBackups,
   type AppRole,
   type ApprovedUser,
   type UserProfile,
@@ -30,13 +32,16 @@ export default function AdminPanel({
   const [draft, setDraft] = useState<ApprovedUser>(emptyApproval);
   const [message, setMessage] = useState("");
   const [busyEmail, setBusyEmail] = useState("");
+  const [progressBackups, setProgressBackups] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     const stopApprovals = watchApprovedUsers(setApprovals, setMessage);
     const stopProfiles = watchAllUsers(setProfiles, setMessage);
+    const stopBackups = watchProgressBackups(setProgressBackups, setMessage);
     return () => {
       stopApprovals();
       stopProfiles();
+      stopBackups();
     };
   }, []);
 
@@ -82,15 +87,28 @@ export default function AdminPanel({
     }
   };
 
-  const clearProgress = async (profile: UserProfile) => {
-    if (!window.confirm(`Clear all saved progress for ${profile.displayName}?`)) {
+  const resetProgress = async (profile: UserProfile) => {
+    if (!window.confirm(`Back up and reset all saved progress for ${profile.displayName}? You can restore it afterward.`)) {
       return;
     }
     setBusyEmail(profile.email);
     setMessage("");
     try {
-      await clearMenteeProgress(profile.uid);
-      setMessage(`${profile.displayName}'s progress was cleared.`);
+      await resetMenteeProgress(profile.uid);
+      setMessage(`${profile.displayName}'s progress was backed up and reset.`);
+    } catch (error) {
+      setMessage(readableFirebaseError(error));
+    } finally {
+      setBusyEmail("");
+    }
+  };
+
+  const restoreProgress = async (profile: UserProfile) => {
+    setBusyEmail(profile.email);
+    setMessage("");
+    try {
+      await restoreMenteeProgress(profile.uid);
+      setMessage(`${profile.displayName}'s previous progress was restored.`);
     } catch (error) {
       setMessage(readableFirebaseError(error));
     } finally {
@@ -266,9 +284,15 @@ export default function AdminPanel({
                           type="button"
                           className="clear-progress"
                           disabled={busy}
-                          onClick={() => clearProgress(profile)}
+                          onClick={() =>
+                            progressBackups.has(profile.uid)
+                              ? restoreProgress(profile)
+                              : resetProgress(profile)
+                          }
                         >
-                          Clear progress
+                          {progressBackups.has(profile.uid)
+                            ? "Restore progress"
+                            : "Back up & reset"}
                         </button>
                       ) : (
                         <span>—</span>
