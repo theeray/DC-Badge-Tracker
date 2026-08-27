@@ -31,6 +31,10 @@ import {
 type Role = "mentee" | "mentor" | "director" | "guest";
 type View = "overview" | "projects" | string;
 type BrandGuideId = "digital-corps" | "bsu-academics" | "bsu-athletics" | "tad";
+type UndoAction = {
+  message: string;
+  run: () => Promise<void>;
+};
 
 const defaultStatuses = Object.fromEntries(
   allSkills.map((item) => [item.id, "not-started"]),
@@ -427,6 +431,8 @@ function TrackerWorkspace({
   const [project, setProject] = useState<ProjectBrief | null>(null);
   const [selectedBrandGuide, setSelectedBrandGuide] = useState<BrandGuideId>("digital-corps");
   const [announcement, setAnnouncement] = useState("");
+  const [undoAction, setUndoAction] = useState<UndoAction | null>(null);
+  const [undoBusy, setUndoBusy] = useState(false);
   const [syncState, setSyncState] = useState<"loading" | "saved" | "guest" | "error">(
     role === "guest" ? "guest" : "loading",
   );
@@ -573,6 +579,17 @@ function TrackerWorkspace({
     try {
       await saveProgress(targetMenteeId, nextStatuses);
       setSyncState("saved");
+      const previousStatuses = statuses;
+      const menteeId = targetMenteeId;
+      setUndoAction({
+        message: `${item.title} changed to ${statusLabels[next]}.`,
+        run: async () => {
+          await saveProgress(menteeId, previousStatuses);
+          setStatuses(previousStatuses);
+          setSyncState("saved");
+          setAnnouncement(`${item.title} was restored to ${statusLabels[current]}.`);
+        },
+      });
     } catch (error) {
       setStatuses(statuses);
       setAnnouncement(readableFirebaseError(error));
@@ -596,17 +613,48 @@ function TrackerWorkspace({
       if (existing) {
         await removeEndorsement(existing.id);
         setAnnouncement(`Your endorsement for ${item.title} was removed.`);
+        const menteeId = targetMenteeId;
+        const mentor = session.profile;
+        setUndoAction({
+          message: `Endorsement removed from ${item.title}.`,
+          run: async () => {
+            await addEndorsement(menteeId, item.id, mentor);
+            setAnnouncement(`Your endorsement for ${item.title} was restored.`);
+          },
+        });
       } else {
-        await addEndorsement(
+        const endorsementId = await addEndorsement(
           targetMenteeId,
           item.id,
           session.profile,
         );
         setAnnouncement(`You endorsed ${item.title}.`);
+        setUndoAction({
+          message: `You endorsed ${item.title}.`,
+          run: async () => {
+            await removeEndorsement(endorsementId);
+            setAnnouncement(`Your endorsement for ${item.title} was undone.`);
+          },
+        });
       }
     } catch (error) {
       setAnnouncement(readableFirebaseError(error));
       setSyncState("error");
+    }
+  };
+
+  const undoLastAction = async () => {
+    if (!undoAction || undoBusy) return;
+    const action = undoAction;
+    setUndoBusy(true);
+    try {
+      await action.run();
+      setUndoAction(null);
+    } catch (error) {
+      setAnnouncement(readableFirebaseError(error));
+      setSyncState("error");
+    } finally {
+      setUndoBusy(false);
     }
   };
 
@@ -1126,6 +1174,15 @@ function TrackerWorkspace({
         </div>
       </main>
 
+      {undoAction ? (
+        <aside className="undo-toast" role="status">
+          <span>{undoAction.message}</span>
+          <button type="button" onClick={() => void undoLastAction()} disabled={undoBusy}>
+            {undoBusy ? "Restoring…" : "Undo"}
+          </button>
+          <button type="button" className="undo-dismiss" onClick={() => setUndoAction(null)} aria-label="Dismiss undo message">×</button>
+        </aside>
+      ) : null}
       <p className="sr-only" aria-live="polite">{announcement}</p>
       {project ? <ProjectModal project={project} onClose={() => setProject(null)} /> : null}
     </div>
