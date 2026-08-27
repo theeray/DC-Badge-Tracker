@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import AdminPanel from "./admin-panel";
+import AuthPanel from "./auth-panel";
 import {
   allSkills,
   learningAreas,
@@ -11,12 +13,24 @@ import {
   type Skill,
   type SkillStatus,
 } from "./data";
-import { accountRoleDetails, facultyDirectors, type AccountRole } from "./accounts";
+import {
+  addEndorsement,
+  readableFirebaseError,
+  removeEndorsement,
+  saveProgress,
+  signOutCurrentUser,
+  watchAuthSession,
+  watchEndorsements,
+  watchMentees,
+  watchProgress,
+  type AuthSession,
+  type Endorsement,
+  type UserProfile,
+} from "./firebase";
 
-type Role = AccountRole;
+type Role = "mentee" | "mentor" | "director" | "guest";
 type View = "overview" | "projects" | string;
 type BrandGuideId = "digital-corps" | "bsu-academics" | "bsu-athletics" | "tad";
-const STORAGE_KEY = "digital-corps-badge-tracker-preview-v2";
 
 const defaultStatuses = Object.fromEntries(
   allSkills.map((item) => [item.id, "not-started"]),
@@ -25,12 +39,6 @@ const defaultStatuses = Object.fromEntries(
 const defaultEndorsements = Object.fromEntries(
   allSkills.map((item) => [item.id, 0]),
 ) as Record<string, number>;
-
-const rolePresentation: Record<Role, { initials: string; name: string; title: string }> = {
-  student: { initials: "ST", name: "Student workspace", title: "Mentee account not signed in" },
-  mentor: { initials: "MN", name: "Mentor workspace", title: "Mentor account not signed in" },
-  director: { initials: "FD", name: "Faculty Director workspace", title: "Accounts planned: Eric Carlson · Mitch Blessing" },
-};
 
 const iconForArea: Record<string, string> = {
   onboarding: "01",
@@ -52,42 +60,42 @@ const digitalCorpsAssets = [
     description: "The complete reference for logo use, colors, typography, pattern, and applications.",
     format: "PDF · 432 KB",
     kind: "Guide",
-    href: "./downloads/digital-corps/digital-corps-brand-guide.pdf",
+    href: "/downloads/digital-corps/digital-corps-brand-guide.pdf",
   },
   {
     title: "Digital Corps Logo Package",
     description: "Primary, secondary, horizontal, symbol, white, Lab Corps, and Studio Corps artwork.",
     format: "ZIP · 8.8 MB",
     kind: "Logos",
-    href: "./downloads/digital-corps/digital-corps-logos.zip",
+    href: "/downloads/digital-corps/digital-corps-logos.zip",
   },
   {
     title: "Geometric Pattern",
     description: "Editable Illustrator source for the official repeating Digital Corps pattern.",
     format: "AI · 328 KB",
     kind: "Pattern",
-    href: "./downloads/digital-corps/digital-corps-geometric-pattern.ai",
+    href: "/downloads/digital-corps/digital-corps-geometric-pattern.ai",
   },
   {
     title: "Abrade ExtraBold",
     description: "The approved display typeface file for branded headlines and high-impact copy.",
     format: "ZIP · 56 KB",
     kind: "Type",
-    href: "./downloads/digital-corps/digital-corps-typeface.zip",
+    href: "/downloads/digital-corps/digital-corps-typeface.zip",
   },
   {
     title: "Lower Thirds",
     description: "Left- and right-aligned After Effects packages with linked Illustrator artwork.",
     format: "ZIP · 2.3 MB",
     kind: "Motion",
-    href: "./downloads/digital-corps/digital-corps-lower-thirds.zip",
+    href: "/downloads/digital-corps/digital-corps-lower-thirds.zip",
   },
   {
     title: "Logo Reveal",
     description: "After Effects source, linked logo artwork, and a rendered MP4 reference.",
     format: "ZIP · 1.4 MB",
     kind: "Motion",
-    href: "./downloads/digital-corps/digital-corps-logo-reveal.zip",
+    href: "/downloads/digital-corps/digital-corps-logo-reveal.zip",
   },
 ] as const;
 
@@ -97,42 +105,42 @@ const bsuAcademicAssets = [
     description: "The 44-page academic identity guide, optimized for reliable in-app viewing and download.",
     format: "PDF · 8.9 MB",
     kind: "Guide",
-    href: "./downloads/bsu-academics/bsu-brand-guide-2020.pdf",
+    href: "/downloads/bsu-academics/bsu-brand-guide-2020.pdf",
   },
   {
     title: "Academic Logo Suite",
     description: "The full academic logo set in AI, EPS, PDF, PNG, and JPG formats, plus the 2020 color palette reference.",
     format: "ZIP · 23.9 MB",
     kind: "Logos",
-    href: "./downloads/bsu-academics/bsu-academic-logos.zip",
+    href: "/downloads/bsu-academics/bsu-academic-logos.zip",
   },
   {
     title: "Academic Typefaces",
     description: "The supplied Whitney family plus Adobe Garamond and Minion Pro document fonts.",
     format: "ZIP · 777 KB",
     kind: "Type",
-    href: "./downloads/bsu-academics/bsu-academic-typefaces.zip",
+    href: "/downloads/bsu-academics/bsu-academic-typefaces.zip",
   },
   {
     title: "Patterns & Pine Assets",
     description: "Bark, ice, rock, pines, crop texture, and solo-tree source assets from the academic system.",
     format: "ZIP · 3.8 MB",
     kind: "Pattern",
-    href: "./downloads/bsu-academics/bsu-academic-patterns.zip",
+    href: "/downloads/bsu-academics/bsu-academic-patterns.zip",
   },
   {
     title: "Icon Source Samples",
     description: "Editable examples for building icons in the approved geometric academic style.",
     format: "ZIP · 3.3 MB",
     kind: "Icons",
-    href: "./downloads/bsu-academics/bsu-icon-source-samples.zip",
+    href: "/downloads/bsu-academics/bsu-icon-source-samples.zip",
   },
 ] as const;
 
 const athleticsAssets = [
-  { src: "./brand/bsu-athletics/football.jpg", label: "Historic football photograph" },
-  { src: "./brand/bsu-athletics/img-1970s-womens-field-hockey2.jpg", label: "1970s women’s field hockey photograph" },
-  { src: "./brand/bsu-athletics/istock-498506367.jpg", label: "Volleyball athlete photograph" },
+  { src: "/brand/bsu-athletics/football.jpg", label: "Historic football photograph" },
+  { src: "/brand/bsu-athletics/img-1970s-womens-field-hockey2.jpg", label: "1970s women’s field hockey photograph" },
+  { src: "/brand/bsu-athletics/istock-498506367.jpg", label: "Volleyball athlete photograph" },
 ] as const;
 
 const bsuAthleticsDownloadAssets = [
@@ -141,21 +149,21 @@ const bsuAthleticsDownloadAssets = [
     description: "Beaver icon, BSU Beaver lockups, baseball monogram, and the supplied athletics identity reference PDF.",
     format: "ZIP · 1.4 MB",
     kind: "Logos",
-    href: "./downloads/bsu-athletics/bsu-athletics-logo-package.zip",
+    href: "/downloads/bsu-athletics/bsu-athletics-logo-package.zip",
   },
   {
     title: "Bucky Mascot Vectors",
     description: "Green, Pantone, outline, grayscale, three-color, and five-color Bucky Illustrator artwork.",
     format: "ZIP · 21.0 MB",
     kind: "Mascot",
-    href: "./downloads/bsu-athletics/bsu-bucky-mascot-vectors.zip",
+    href: "/downloads/bsu-athletics/bsu-bucky-mascot-vectors.zip",
   },
   {
     title: "Reserved Sports Imagery",
     description: "Football, women’s field hockey, and volleyball photographs kept out of the academic toolkit.",
     format: "ZIP · 10.9 MB",
     kind: "Photos",
-    href: "./downloads/bsu-athletics/bsu-athletics-reserved-imagery.zip",
+    href: "/downloads/bsu-athletics/bsu-athletics-reserved-imagery.zip",
   },
 ] as const;
 
@@ -165,28 +173,28 @@ const tadAssets = [
     description: "The official 2024 single-page guide for logos, Futura PT typography, colors, and accessibility.",
     format: "PDF · 496 KB",
     kind: "Guide",
-    href: "./downloads/tad/tad-brand-guidelines-2024.pdf",
+    href: "/downloads/tad/tad-brand-guidelines-2024.pdf",
   },
   {
     title: "TAD Logo Package",
     description: "Color, black-and-white, icon, horizontal, transparent, and editable vector logo versions.",
     format: "ZIP · 1.7 MB",
     kind: "Logos",
-    href: "./downloads/tad/tad-logo-package.zip",
+    href: "/downloads/tad/tad-logo-package.zip",
   },
   {
     title: "Alphabet & Linktree Logos",
     description: "Four-page Illustrator source containing the TAD alphabet system and Linktree logo artwork.",
     format: "AI · 1.3 MB",
     kind: "Vector",
-    href: "./downloads/tad/tad-alphabet-linktree-logos.ai",
+    href: "/downloads/tad/tad-alphabet-linktree-logos.ai",
   },
   {
     title: "Bridgeman Practice Image",
     description: "Compressed download containing the layered Bridgeman Hall PSD for TAD design exercises and composites.",
     format: "ZIP · 21.9 MB",
     kind: "Photo",
-    href: "./downloads/tad/bridgeman-practice-image.zip",
+    href: "/downloads/tad/bridgeman-practice-image.zip",
   },
 ] as const;
 
@@ -255,46 +263,10 @@ function EndorsementStack({ count }: { count: number }) {
   if (!count) return <span className="no-endorsements">No endorsements yet</span>;
   return (
     <div className="endorsement-stack" aria-label={`${count} mentor endorsement${count === 1 ? "" : "s"}`}>
-      <span aria-hidden="true">✓</span>
-      {count > 1 ? <span aria-hidden="true">✓</span> : null}
+      <span>MK</span>
+      {count > 1 ? <span>JT</span> : null}
       {count > 2 ? <span>+{count - 2}</span> : null}
       <b>{count} endorsed</b>
-    </div>
-  );
-}
-
-function AccountAccessModal({ onClose }: { onClose: () => void }) {
-  useEffect(() => {
-    const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onClose();
-    };
-    window.addEventListener("keydown", closeOnEscape);
-    return () => window.removeEventListener("keydown", closeOnEscape);
-  }, [onClose]);
-
-  return (
-    <div className="modal-backdrop" role="presentation" onMouseDown={onClose}>
-      <article className="account-modal" role="dialog" aria-modal="true" aria-labelledby="account-modal-title" onMouseDown={(event) => event.stopPropagation()}>
-        <header>
-          <div><span className="eyebrow">Account foundation</span><h2 id="account-modal-title">Real people, clearly defined roles.</h2></div>
-          <button className="close-button" onClick={onClose} aria-label="Close account information">×</button>
-        </header>
-        <p className="account-intro">This version saves progress only in this browser. The next connection will add secure sign-in, shared progress, review assignments, kudos, and comments.</p>
-        <div className="account-role-grid">
-          {(Object.entries(accountRoleDetails) as [Role, (typeof accountRoleDetails)[Role]][]).map(([id, detail], index) => (
-            <section key={id}>
-              <span>{String(index + 1).padStart(2, "0")}</span>
-              <h3>{detail.label}</h3>
-              <p>{detail.summary}</p>
-            </section>
-          ))}
-        </div>
-        <section className="director-roster">
-          <div><span className="eyebrow">Faculty director access</span><h3>Full program oversight</h3><p>Directors will be able to view student and mentor activity, give kudos, leave comments, and manage account roles.</p></div>
-          <ul>{facultyDirectors.map((director) => <li key={director.id}><span>{director.displayName.split(" ").map((part) => part[0]).join("")}</span><div><strong>{director.displayName}</strong><small>{director.title}</small></div></li>)}</ul>
-        </section>
-        <footer><span>Authentication and shared data are not active yet.</span><button className="primary-button" onClick={onClose}>Continue with local preview</button></footer>
-      </article>
     </div>
   );
 }
@@ -362,7 +334,7 @@ function ProjectModal({ project, onClose }: { project: ProjectBrief; onClose: ()
               <p className="section-copy">Nine client-supplied orchestra photographs are ready to use in the flyer and social post.</p>
               <div className="asset-grid">
                 {project.assets.slice(0, 6).map((asset) => (
-                  <img key={asset} src={`./project-assets/orchestra/${asset}`} alt="Orchestra reference photograph" />
+                  <img key={asset} src={`/project-assets/orchestra/${asset}`} alt="Orchestra reference photograph" />
                 ))}
               </div>
             </section>
@@ -379,40 +351,162 @@ function ProjectModal({ project, onClose }: { project: ProjectBrief; onClose: ()
 }
 
 export default function Tracker() {
-  const [role, setRole] = useState<Role>("student");
+  const [session, setSession] = useState<AuthSession | null>(null);
+  const [authReady, setAuthReady] = useState(false);
+  const [sessionError, setSessionError] = useState("");
+  const [browsing, setBrowsing] = useState(false);
+
+  useEffect(
+    () =>
+      watchAuthSession(
+        (nextSession) => {
+          setSession(nextSession);
+          setAuthReady(true);
+          if (nextSession) {
+            setBrowsing(false);
+            setSessionError("");
+          }
+        },
+        (message) => {
+          setSessionError(message);
+          setAuthReady(true);
+        },
+      ),
+    [],
+  );
+
+  if (!authReady) {
+    return (
+      <main className="auth-loading">
+        <img src="/brand/digital-corps-symbol.png" alt="" />
+        <span>Connecting to Digital Corps…</span>
+      </main>
+    );
+  }
+
+  if (!session && !browsing) {
+    return (
+      <AuthPanel
+        onBrowse={() => setBrowsing(true)}
+        sessionError={sessionError}
+      />
+    );
+  }
+
+  return (
+    <TrackerWorkspace
+      session={session}
+      onRequireSignIn={() => setBrowsing(false)}
+      onSignOut={async () => {
+        await signOutCurrentUser();
+        setBrowsing(false);
+      }}
+    />
+  );
+}
+
+function TrackerWorkspace({
+  session,
+  onRequireSignIn,
+  onSignOut,
+}: {
+  session: AuthSession | null;
+  onRequireSignIn: () => void;
+  onSignOut: () => Promise<void>;
+}) {
+  const role: Role = session?.profile.role ?? "guest";
   const [view, setView] = useState<View>("overview");
   const [statuses, setStatuses] = useState<Record<string, SkillStatus>>(defaultStatuses);
   const [endorsements, setEndorsements] = useState<Record<string, number>>(defaultEndorsements);
   const [sessionEndorsed, setSessionEndorsed] = useState<string[]>([]);
+  const [endorsementRecords, setEndorsementRecords] = useState<Endorsement[]>([]);
+  const [mentees, setMentees] = useState<UserProfile[]>([]);
+  const [selectedMenteeId, setSelectedMenteeId] = useState("");
   const [selectedGroup, setSelectedGroup] = useState("All skills");
   const [query, setQuery] = useState("");
   const [project, setProject] = useState<ProjectBrief | null>(null);
   const [selectedBrandGuide, setSelectedBrandGuide] = useState<BrandGuideId>("digital-corps");
   const [announcement, setAnnouncement] = useState("");
-  const [syncState, setSyncState] = useState<"loading" | "saved" | "session">("loading");
-  const [accountOpen, setAccountOpen] = useState(false);
+  const [syncState, setSyncState] = useState<"loading" | "saved" | "guest" | "error">(
+    role === "guest" ? "guest" : "loading",
+  );
 
   useEffect(() => {
-    const timer = window.setTimeout(() => {
-      try {
-        const stored = window.localStorage.getItem(STORAGE_KEY);
-        if (stored) {
-          const data = JSON.parse(stored) as {
-            statuses?: Record<string, SkillStatus>;
-            endorsements?: Record<string, number>;
-            endorsed?: string[];
-          };
-          if (data.statuses) setStatuses((value) => ({ ...value, ...data.statuses }));
-          if (data.endorsements) setEndorsements((value) => ({ ...value, ...data.endorsements }));
-          if (data.endorsed) setSessionEndorsed(data.endorsed);
-        }
+    if (role !== "mentor" && role !== "director") {
+      return;
+    }
+    return watchMentees(
+      (nextMentees) => {
+        setMentees(nextMentees);
+        setSelectedMenteeId((current) =>
+          current && nextMentees.some((item) => item.uid === current)
+            ? current
+            : (nextMentees[0]?.uid ?? ""),
+        );
+      },
+      (message) => {
+        setAnnouncement(message);
+        setSyncState("error");
+      },
+    );
+  }, [role]);
+
+  const targetMenteeId =
+    role === "mentee" ? (session?.profile.uid ?? "") : selectedMenteeId;
+  const selectedMentee =
+    role === "mentee"
+      ? session?.profile
+      : mentees.find((item) => item.uid === targetMenteeId);
+
+  useEffect(() => {
+    if (!targetMenteeId) {
+      const timer = window.setTimeout(() => {
+        setStatuses(defaultStatuses);
+        setEndorsements(defaultEndorsements);
+        setSessionEndorsed([]);
+        setEndorsementRecords([]);
+        setSyncState(role === "guest" ? "guest" : "saved");
+      }, 0);
+      return () => window.clearTimeout(timer);
+    }
+
+    const stopProgress = watchProgress(
+      targetMenteeId,
+      (savedStatuses) => {
+        setStatuses({ ...defaultStatuses, ...savedStatuses });
         setSyncState("saved");
-      } catch {
-        setSyncState("session");
-      }
-    }, 0);
-    return () => window.clearTimeout(timer);
-  }, []);
+      },
+      (message) => {
+        setAnnouncement(message);
+        setSyncState("error");
+      },
+    );
+    const stopEndorsements = watchEndorsements(
+      targetMenteeId,
+      (records) => {
+        setEndorsementRecords(records);
+        const counts = { ...defaultEndorsements };
+        for (const item of records) {
+          counts[item.skillId] = (counts[item.skillId] ?? 0) + 1;
+        }
+        setEndorsements(counts);
+        setSessionEndorsed(
+          records
+            .filter((item) => item.mentorId === session?.profile.uid)
+            .map((item) => item.skillId),
+        );
+      },
+      (message) => {
+        setAnnouncement(message);
+        setSyncState("error");
+      },
+    );
+
+    return () => {
+      stopProgress();
+      stopEndorsements();
+    };
+  }, [role, session?.profile.uid, targetMenteeId]);
 
   const completeCount = allSkills.filter((item) => statuses[item.id] === "complete").length;
   const readyCount = allSkills.filter((item) => statuses[item.id] === "ready").length;
@@ -425,7 +519,7 @@ export default function Tracker() {
         eyebrow: "Digital Corps standards",
         title: "Digital Corps",
         copy: "Use the official identity system for practice projects across print, social, motion, and environmental work.",
-        logo: "./brand/digital-corps-white.png",
+        logo: "/brand/digital-corps-white.png",
         alt: "Digital Corps",
       }
     : selectedBrandGuide === "bsu-academics"
@@ -433,7 +527,7 @@ export default function Tracker() {
           eyebrow: "Bemidji State University",
           title: "Academic Brand",
           copy: "Build university communications with the official academic logo, Evergreen and Snow palette, Whitney and Adobe Garamond type system, and Northwoods visual language.",
-          logo: "./brand/bsu-academics/bemidji-state-logo-white.png",
+          logo: "/brand/bsu-academics/bemidji-state-logo-white.png",
           alt: "Bemidji State University",
         }
       : selectedBrandGuide === "bsu-athletics"
@@ -441,14 +535,14 @@ export default function Tracker() {
             eyebrow: "BSU Athletics collection",
             title: "Athletics Assets",
             copy: "Official Beaver and Bucky identity files live here, while sports imagery remains separated from the BSU academic brand toolkit.",
-            logo: "./brand/bsu-athletics/bsu-beaver-logo.png",
+            logo: "/brand/bsu-athletics/bsu-beaver-logo.png",
             alt: "BSU Beaver athletics logo",
           }
         : {
             eyebrow: "Technology, Art & Design",
             title: "TAD Brand",
             copy: "Use the 2024 TAD system for School of Technology, Art & Design projects, with the supplied logo suite, Futura PT typography, pillar colors, and accessible black text.",
-            logo: "./brand/tad/tad-school-white.png",
+            logo: "/brand/tad/tad-school-white.png",
             alt: "School of Technology, Art and Design",
           };
 
@@ -468,59 +562,76 @@ export default function Tracker() {
     setQuery("");
   };
 
-  const persistSnapshot = (
-    nextStatuses: Record<string, SkillStatus>,
-    nextEndorsements: Record<string, number>,
-    nextEndorsed: string[],
-  ) => {
-    try {
-      window.localStorage.setItem(
-        STORAGE_KEY,
-        JSON.stringify({ statuses: nextStatuses, endorsements: nextEndorsements, endorsed: nextEndorsed }),
-      );
-      setSyncState("saved");
-    } catch {
-      setSyncState("session");
-    }
-  };
-
-  const advanceStatus = (item: Skill) => {
-    if (role !== "student") return;
+  const advanceStatus = async (item: Skill) => {
+    if (role !== "mentee" || !targetMenteeId) return;
     const current = statuses[item.id];
     const next = statusOrder[(statusOrder.indexOf(current) + 1) % statusOrder.length];
     const nextStatuses = { ...statuses, [item.id]: next };
     setStatuses(nextStatuses);
     setAnnouncement(`${item.title} marked ${statusLabels[next]}.`);
-    persistSnapshot(nextStatuses, endorsements, sessionEndorsed);
+    setSyncState("loading");
+    try {
+      await saveProgress(targetMenteeId, nextStatuses);
+      setSyncState("saved");
+    } catch (error) {
+      setStatuses(statuses);
+      setAnnouncement(readableFirebaseError(error));
+      setSyncState("error");
+    }
   };
 
-  const endorse = (item: Skill) => {
+  const endorse = async (item: Skill) => {
     if (
-      role === "student" ||
-      sessionEndorsed.includes(item.id) ||
+      role !== "mentor" ||
+      !session?.profile ||
+      !targetMenteeId ||
       !["ready", "complete"].includes(statuses[item.id])
     ) return;
-    const nextEndorsements = { ...endorsements, [item.id]: (endorsements[item.id] ?? 0) + 1 };
-    const nextEndorsed = [...sessionEndorsed, item.id];
-    setEndorsements(nextEndorsements);
-    setSessionEndorsed(nextEndorsed);
-    setAnnouncement(`You endorsed ${item.title}.`);
-    persistSnapshot(statuses, nextEndorsements, nextEndorsed);
+    try {
+      const existing = endorsementRecords.find(
+        (record) =>
+          record.skillId === item.id &&
+          record.mentorId === session.profile.uid,
+      );
+      if (existing) {
+        await removeEndorsement(existing.id);
+        setAnnouncement(`Your endorsement for ${item.title} was removed.`);
+      } else {
+        await addEndorsement(
+          targetMenteeId,
+          item.id,
+          session.profile,
+        );
+        setAnnouncement(`You endorsed ${item.title}.`);
+      }
+    } catch (error) {
+      setAnnouncement(readableFirebaseError(error));
+      setSyncState("error");
+    }
   };
 
-  const switchRole = (next: Role) => {
-    setRole(next);
-    setAnnouncement(`Previewing the ${accountRoleDetails[next].label.toLowerCase()} workspace.`);
-  };
-
-  const activeRole = rolePresentation[role];
-  const reviewRole = role === "mentor" || role === "director";
+  const displayName = session?.profile.displayName ?? "Guest visitor";
+  const initials = displayName
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase())
+    .join("") || "DC";
+  const roleLabel =
+    role === "mentee"
+      ? "Student mentee"
+      : role === "mentor"
+        ? "Student mentor"
+        : role === "director"
+          ? "Faculty director"
+          : "Public resources";
+  const isReviewer = role === "mentor" || role === "director";
 
   return (
     <div className="app-shell">
       <aside className="sidebar">
         <div className="brand-lockup">
-          <img src="./brand/digital-corps-white.png" alt="Digital Corps" />
+          <img src="/brand/digital-corps-white.png" alt="Digital Corps" />
           <div><strong>Badge Tracker</strong><span>Learn · Practice · Endorse</span></div>
         </div>
 
@@ -535,6 +646,11 @@ export default function Tracker() {
           <button className={view === "brand-guides" ? "active" : ""} onClick={() => setActiveView("brand-guides")}>
             <span className="nav-index">◈</span><span>Brand guides</span><em>{brandGuides.length}</em>
           </button>
+          {role === "director" ? (
+            <button className={view === "admin" ? "active" : ""} onClick={() => setActiveView("admin")}>
+              <span className="nav-index">⚙</span><span>Accounts & records</span>
+            </button>
+          ) : null}
 
           <p className="nav-label">Learning paths</p>
           {learningAreas.map((area) => (
@@ -547,7 +663,7 @@ export default function Tracker() {
 
         <div className="sidebar-card">
           <span className="spark">✦</span>
-          <div><strong>{role === "director" ? "Director focus" : "Mentor tip"}</strong><p>{role === "director" ? "Use kudos for recognition and comments for useful next steps." : "Endorse the demonstrated skill, not just tutorial completion."}</p></div>
+          <div><strong>Mentor tip</strong><p>Endorse the demonstrated skill, not just tutorial completion.</p></div>
         </div>
 
         <p className="sidebar-foot">Digital Corps · Bemidji State University</p>
@@ -556,18 +672,44 @@ export default function Tracker() {
       <main className="main-panel">
         <header className="topbar">
           <button className="mobile-brand" onClick={() => setActiveView("overview")} aria-label="Digital Corps home">
-            <img src="./brand/digital-corps-symbol.png" alt="" />
+            <img src="/brand/digital-corps-symbol.png" alt="" />
           </button>
-          <div className="role-switch" aria-label="Workspace role">
-            <span>Workspace</span>
-            <button className={role === "student" ? "active" : ""} onClick={() => switchRole("student")}>Student</button>
-            <button className={role === "mentor" ? "active" : ""} onClick={() => switchRole("mentor")}>Mentor</button>
-            <button className={role === "director" ? "active" : ""} onClick={() => switchRole("director")}>Director</button>
-          </div>
-          <span className={`save-state save-${syncState}`}>{syncState === "loading" ? "Loading…" : syncState === "saved" ? "Local preview" : "Session preview"}</span>
+          {isReviewer ? (
+            <label className="mentee-picker">
+              <span>Reviewing</span>
+              <select
+                value={selectedMenteeId}
+                onChange={(event) => setSelectedMenteeId(event.target.value)}
+                disabled={!mentees.length}
+                aria-label="Select mentee to review"
+              >
+                {!mentees.length ? <option value="">No activated mentees</option> : null}
+                {mentees.map((mentee) => (
+                  <option value={mentee.uid} key={mentee.uid}>{mentee.displayName}</option>
+                ))}
+              </select>
+            </label>
+          ) : (
+            <span className="actual-role">{roleLabel}</span>
+          )}
+          <span className={`save-state save-${syncState}`}>
+            {syncState === "loading"
+              ? "Syncing…"
+              : syncState === "saved"
+                ? "Saved to Firebase"
+                : syncState === "guest"
+                  ? "Browsing only"
+                  : "Sync problem"}
+          </span>
           <div className="topbar-actions">
-            <button className="account-access-button" onClick={() => setAccountOpen(true)}>Account access</button>
-            <div className="user-chip"><span>{activeRole.initials}</span><div><strong>{activeRole.name}</strong><small>{activeRole.title}</small></div></div>
+            {session ? (
+              <>
+                <div className="user-chip"><span>{initials}</span><div><strong>{displayName}</strong><small>{roleLabel}</small></div></div>
+                <button className="sign-out-button" onClick={() => void onSignOut()}>Sign out</button>
+              </>
+            ) : (
+              <button className="sign-in-button" onClick={onRequireSignIn}>Sign in to track progress</button>
+            )}
           </div>
         </header>
 
@@ -576,12 +718,36 @@ export default function Tracker() {
             <>
               <section className="hero-card">
                 <div className="hero-copy">
-                  <span className="eyebrow">{role === "student" ? "Your learning dashboard" : role === "mentor" ? "Mentor endorsement desk" : "Faculty Director workspace"}</span>
-                  <h1>{role === "student" ? "Make progress visible." : role === "mentor" ? "Recognize skills in action." : "Guide the whole program."}</h1>
-                  <p>{role === "student" ? "Work through tutorials, apply the skills in real projects, and request mentor review when you are ready." : role === "mentor" ? "Review mentee progress and endorse the skills you have personally seen demonstrated." : "Support students and mentors with program-wide review, kudos, comments, and clear next steps."}</p>
+                  <span className="eyebrow">
+                    {role === "mentee"
+                      ? "Your learning dashboard"
+                      : isReviewer
+                        ? `${role === "director" ? "Director" : "Mentor"} endorsement desk`
+                        : "Public Digital Corps resources"}
+                  </span>
+                  <h1>
+                    {role === "mentee"
+                      ? "Make progress visible."
+                      : isReviewer
+                        ? "Recognize skills in action."
+                        : "Explore the learning paths."}
+                  </h1>
+                  <p>
+                    {role === "mentee"
+                      ? "Work through tutorials, apply the skills in real projects, and request mentor review when you are ready."
+                      : isReviewer
+                        ? selectedMentee
+                          ? `Review ${selectedMentee.displayName}'s progress and endorse skills you have personally seen demonstrated.`
+                          : "Activated mentees will appear here for review."
+                        : "Browse tutorials, practice projects, and official brand resources. Sign in to save progress."}
+                  </p>
                   <div className="hero-actions">
-                    <button className="primary-button" onClick={() => setActiveView(role === "student" ? "content-creation" : "onboarding")}>
-                      {role === "student" ? "Start learning" : readyCount ? `Review ${readyCount} ready skills` : "View learning paths"} <span>→</span>
+                    <button className="primary-button" onClick={() => setActiveView(role === "mentee" ? "content-creation" : "onboarding")}>
+                      {role === "mentee"
+                        ? "Continue learning"
+                        : isReviewer
+                          ? `Review ${readyCount} ready skills`
+                          : "Browse learning paths"} <span>→</span>
                     </button>
                     <button className="secondary-button" onClick={() => setActiveView("projects")}>Browse projects</button>
                   </div>
@@ -596,27 +762,33 @@ export default function Tracker() {
                 <article><span className="stat-icon mint">✦</span><div><strong>{endorsementCount}</strong><span>Skill endorsements</span></div><small>from mentors</small></article>
               </section>
 
-              {reviewRole ? (
+              {isReviewer ? (
                 <section className="dashboard-section">
-                  <div className="section-title"><div><span className="eyebrow">Review queue</span><h2>{role === "director" ? "Program feedback and recognition" : "Ready for your endorsement"}</h2></div>{readyCount ? <button onClick={() => setActiveView("content-creation")}>View all →</button> : null}</div>
-                  {readyCount ? (
-                    <div className="review-list">
-                      {allSkills.filter((item) => statuses[item.id] === "ready").slice(0, 5).map((item) => (
-                        <article key={item.id}>
-                          <div className="student-avatar">LP</div>
-                          <div className="review-copy"><strong>{item.title}</strong><span>Local learner preview · {item.group}</span></div>
-                          <span className="ready-pill">Ready for review</span>
-                          <button className={sessionEndorsed.includes(item.id) ? "endorsed" : "endorse-button"} onClick={() => endorse(item)}>
-                            {sessionEndorsed.includes(item.id) ? "Endorsed ✓" : role === "director" ? "Give kudos" : "Endorse skill"}
+                  <div className="section-title"><div><span className="eyebrow">Review queue</span><h2>Ready for your endorsement</h2></div><button onClick={() => setActiveView("content-creation")}>View all →</button></div>
+                  <div className="review-list">
+                    {allSkills.filter((item) => statuses[item.id] === "ready").slice(0, 5).map((item) => (
+                      <article key={item.id}>
+                        <div className="student-avatar">
+                          {selectedMentee?.displayName
+                            .split(/\s+/)
+                            .slice(0, 2)
+                            .map((part) => part[0])
+                            .join("")
+                            .toUpperCase() || "DC"}
+                        </div>
+                        <div className="review-copy"><strong>{item.title}</strong><span>{selectedMentee?.displayName ?? "No mentee selected"} · {item.group}</span></div>
+                        <span className="ready-pill">Ready for review</span>
+                        {role === "mentor" ? (
+                          <button className={sessionEndorsed.includes(item.id) ? "endorsed" : "endorse-button"} onClick={() => void endorse(item)}>
+                            {sessionEndorsed.includes(item.id) ? "Endorsed ✓" : "Endorse skill"}
                           </button>
-                        </article>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="account-empty-state">
-                      <span>◎</span><div><strong>No mentees are connected yet</strong><p>Secure accounts will populate this queue with real review requests. Faculty Directors will also be able to give kudos and leave comments.</p></div><button onClick={() => setAccountOpen(true)}>See account roles →</button>
-                    </div>
-                  )}
+                        ) : <span className="director-review-label">Director view</span>}
+                      </article>
+                    ))}
+                    {!allSkills.some((item) => statuses[item.id] === "ready") ? (
+                      <div className="empty-state"><strong>No skills awaiting review</strong><p>{selectedMentee ? `${selectedMentee.displayName} has not marked a skill ready yet.` : "No activated mentees are available yet."}</p></div>
+                    ) : null}
+                  </div>
                 </section>
               ) : (
                 <section className="dashboard-section">
@@ -653,6 +825,10 @@ export default function Tracker() {
             </>
           ) : null}
 
+          {view === "admin" && role === "director" && session ? (
+            <AdminPanel currentDirector={session.profile} />
+          ) : null}
+
           {activeArea ? (
             <>
               <section className="track-heading">
@@ -682,14 +858,18 @@ export default function Tracker() {
                       </div>
                       <EndorsementStack count={endorsements[item.id] ?? 0} />
                       <div className="skill-action">
-                        {role === "student" ? (
-                          <button className={`status-button status-${itemStatus}`} onClick={() => advanceStatus(item)} title="Click to move to the next status">
+                        {role === "mentee" ? (
+                          <button className={`status-button status-${itemStatus}`} onClick={() => void advanceStatus(item)} title="Click to move to the next status">
                             {statusLabels[itemStatus]} <span>⌄</span>
                           </button>
-                        ) : (
-                          <button className={isEndorsed ? "endorsed" : canEndorse ? "endorse-button" : "awaiting-button"} onClick={() => endorse(item)} disabled={isEndorsed || !canEndorse}>
-                            {isEndorsed ? "Endorsed ✓" : canEndorse ? role === "director" ? "Give kudos" : "Endorse skill" : "Awaiting review"}
+                        ) : role === "mentor" ? (
+                          <button className={isEndorsed ? "endorsed" : canEndorse ? "endorse-button" : "awaiting-button"} onClick={() => void endorse(item)} disabled={!canEndorse}>
+                            {isEndorsed ? "Endorsed ✓" : canEndorse ? "Endorse skill" : "Awaiting review"}
                           </button>
+                        ) : role === "director" ? (
+                          <span className="director-review-label">Read only</span>
+                        ) : (
+                          <button className="sign-in-row-button" onClick={onRequireSignIn}>Sign in to track</button>
                         )}
                       </div>
                     </article>
@@ -760,13 +940,13 @@ export default function Tracker() {
                   <section className="brand-foundations">
                     <div className="brand-foundations-heading">
                       <div><span className="eyebrow">Digital Corps</span><h2>Core brand foundations</h2><p>Keep the system recognizable, accessible, and consistent across print, social, motion, and environmental work.</p></div>
-                      <a className="primary-button" href="./downloads/digital-corps/digital-corps-brand-guide.pdf" download>Download complete guide <span>↓</span></a>
+                      <a className="primary-button" href="/downloads/digital-corps/digital-corps-brand-guide.pdf" download>Download complete guide <span>↓</span></a>
                     </div>
 
                     <div className="foundation-grid">
                       <article className="logo-foundation">
                         <span className="foundation-number">01</span>
-                        <div className="foundation-logo"><img src="./brand/digital-corps-symbol.png" alt="Digital Corps symbol" /></div>
+                        <div className="foundation-logo"><img src="/brand/digital-corps-symbol.png" alt="Digital Corps symbol" /></div>
                         <h3>Logo system</h3>
                         <p>Choose the primary, secondary, horizontal, or symbol version that fits the format. Preserve clear space and the original proportions.</p>
                         <ul><li>Never stretch, skew, or redraw the mark</li><li>Use an approved color variation</li><li>Keep small text out of favicon-scale uses</li></ul>
@@ -810,13 +990,13 @@ export default function Tracker() {
                   <section className="brand-foundations bsu-foundations">
                     <div className="brand-foundations-heading">
                       <div><span className="eyebrow">BSU Academics</span><h2>Academic brand foundations</h2><p>This collection follows the 2020 Bemidji State University academic guide. Athletics files are intentionally excluded and reserved in their own section.</p></div>
-                      <a className="primary-button" href="./downloads/bsu-academics/bsu-brand-guide-2020.pdf" target="_blank" rel="noreferrer">Open complete guide <ExternalArrow /></a>
+                      <a className="primary-button" href="/downloads/bsu-academics/bsu-brand-guide-2020.pdf" target="_blank" rel="noreferrer">Open complete guide <ExternalArrow /></a>
                     </div>
 
                     <div className="foundation-grid">
                       <article className="logo-foundation bsu-logo-foundation">
                         <span className="foundation-number">01</span>
-                        <div className="foundation-logo"><img src="./brand/bsu-academics/bemidji-state-logo.png" alt="Bemidji State University academic logo" /></div>
+                        <div className="foundation-logo"><img src="/brand/bsu-academics/bemidji-state-logo.png" alt="Bemidji State University academic logo" /></div>
                         <h3>Academic logo</h3>
                         <p>The four approved uses are two-color, one-color, reversed, and textural reversed. Keep the mark legible and at least 1.5 inches wide in print.</p>
                         <ul><li>Never crop or use the visual mark alone</li><li>Never stretch, skew, recolor, or add effects</li><li>Reverse only over Evergreen</li></ul>
@@ -861,10 +1041,10 @@ export default function Tracker() {
                   <section className="athletics-reserved-section">
                     <div className="athletics-reserved-heading">
                       <div><span className="eyebrow">BSU Athletics</span><h2>Athletics identity & reserved imagery</h2><p>The Beaver and Bucky files are now organized as athletics-only assets. The three sports photographs remain excluded from every BSU academic download.</p></div>
-                      <a className="primary-button" href="./downloads/bsu-athletics/bsu-athletics-logo-package.zip" download>Download athletics logos <span>↓</span></a>
+                      <a className="primary-button" href="/downloads/bsu-athletics/bsu-athletics-logo-package.zip" download>Download athletics logos <span>↓</span></a>
                     </div>
                     <div className="athletics-identity-summary">
-                      <img src="./brand/bsu-athletics/bsu-beaver-icon.png" alt="BSU Beaver icon" />
+                      <img src="/brand/bsu-athletics/bsu-beaver-icon.png" alt="BSU Beaver icon" />
                       <div><strong>Official identity files received</strong><p>Beaver icon and BSU lockups, baseball monogram, one-color and reversed options, plus eight editable Bucky mascot variations.</p></div>
                     </div>
                     <div className="athletics-preview-grid">
@@ -883,13 +1063,13 @@ export default function Tracker() {
                   <section className="brand-foundations tad-foundations">
                     <div className="brand-foundations-heading">
                       <div><span className="eyebrow">Technology, Art & Design</span><h2>TAD brand foundations</h2><p>The 2024 system connects the school’s technology, art, design, and project disciplines through modular letterforms and a bright pillar palette.</p></div>
-                      <a className="primary-button" href="./downloads/tad/tad-brand-guidelines-2024.pdf" target="_blank" rel="noreferrer">Open complete guide <ExternalArrow /></a>
+                      <a className="primary-button" href="/downloads/tad/tad-brand-guidelines-2024.pdf" target="_blank" rel="noreferrer">Open complete guide <ExternalArrow /></a>
                     </div>
 
                     <div className="foundation-grid">
                       <article className="logo-foundation tad-logo-foundation">
                         <span className="foundation-number">01</span>
-                        <div className="foundation-logo"><img src="./brand/tad/tad-horizontal-logo.png" alt="TAD School of Technology, Art and Design logo" /></div>
+                        <div className="foundation-logo"><img src="/brand/tad/tad-horizontal-logo.png" alt="TAD School of Technology, Art and Design logo" /></div>
                         <h3>Modular logo system</h3>
                         <p>Use the black or white primary logo, the TAD icon alone, or the approved color secondary logo supplied in the package.</p>
                         <ul><li>Keep all three letter modules proportional</li><li>Choose the version that maintains contrast</li><li>Use the supplied vector rather than rebuilding it</li></ul>
@@ -921,7 +1101,7 @@ export default function Tracker() {
 
                       <article className="tad-practice-foundation">
                         <span className="foundation-number">04</span>
-                        <div className="tad-practice-image"><img src="./brand/tad/bridgeman-preview.jpg" alt="Bridgeman Hall practice photograph" /></div>
+                        <div className="tad-practice-image"><img src="/brand/tad/bridgeman-preview.jpg" alt="Bridgeman Hall practice photograph" /></div>
                         <h3>Practice image</h3>
                         <p>The supplied layered Bridgeman Hall PSD is available for composites, color studies, and branded TAD project exercises.</p>
                       </article>
@@ -940,12 +1120,14 @@ export default function Tracker() {
           <button className={learningAreas.some((area) => area.id === view) ? "active" : ""} onClick={() => setActiveView("content-creation")}><span>◫</span>Skills</button>
           <button className={view === "projects" ? "active" : ""} onClick={() => setActiveView("projects")}><span>◆</span>Projects</button>
           <button className={view === "brand-guides" ? "active" : ""} onClick={() => setActiveView("brand-guides")}><span>◈</span>Brand</button>
+          {role === "director" ? (
+            <button className={view === "admin" ? "active" : ""} onClick={() => setActiveView("admin")}><span>⚙</span>Admin</button>
+          ) : null}
         </div>
       </main>
 
       <p className="sr-only" aria-live="polite">{announcement}</p>
       {project ? <ProjectModal project={project} onClose={() => setProject(null)} /> : null}
-      {accountOpen ? <AccountAccessModal onClose={() => setAccountOpen(false)} /> : null}
     </div>
   );
 }
