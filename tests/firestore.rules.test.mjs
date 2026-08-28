@@ -7,11 +7,17 @@ import {
   initializeTestEnvironment,
 } from "@firebase/rules-unit-testing";
 import {
+  collection,
+  deleteDoc,
   doc,
   getDoc,
+  getDocs,
+  query,
   serverTimestamp,
   setDoc,
+  Timestamp,
   updateDoc,
+  where,
 } from "firebase/firestore";
 
 const projectId = "digital-corps-badge-tracker-rules-test";
@@ -166,6 +172,127 @@ test("director can administer profiles and progress", async () => {
       statuses: {},
       updatedAt: serverTimestamp(),
     }),
+  );
+  await assertSucceeds(
+    updateDoc(doc(directorDb, "users", identities.mentor.uid), {
+      active: true,
+      updatedAt: serverTimestamp(),
+    }),
+  );
+});
+
+test("student workers can create and correct only their own time entries", async () => {
+  const menteeDb = authenticated(identities.mentee);
+  const mentorDb = authenticated(identities.mentor);
+  const startedAt = Timestamp.fromDate(new Date("2026-08-28T15:00:00Z"));
+  const endedAt = Timestamp.fromDate(new Date("2026-08-28T17:00:00Z"));
+
+  await assertSucceeds(
+    setDoc(doc(menteeDb, "timeEntries", "mentee-shift"), {
+      workerId: identities.mentee.uid,
+      workerName: identities.mentee.displayName,
+      startedAt,
+      endedAt: null,
+      note: "",
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    }),
+  );
+  await assertSucceeds(
+    updateDoc(doc(menteeDb, "timeEntries", "mentee-shift"), {
+      startedAt,
+      endedAt,
+      note: "Corrected clock-out",
+      updatedAt: serverTimestamp(),
+    }),
+  );
+  await assertSucceeds(
+    getDocs(
+      query(
+        collection(menteeDb, "timeEntries"),
+        where("workerId", "==", identities.mentee.uid),
+      ),
+    ),
+  );
+
+  await assertSucceeds(
+    setDoc(doc(mentorDb, "timeEntries", "mentor-shift"), {
+      workerId: identities.mentor.uid,
+      workerName: identities.mentor.displayName,
+      startedAt,
+      endedAt,
+      note: "Mentor work shift",
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    }),
+  );
+  await assertFails(
+    setDoc(doc(menteeDb, "timeEntries", "forged-mentor-shift"), {
+      workerId: identities.mentor.uid,
+      workerName: identities.mentor.displayName,
+      startedAt,
+      endedAt,
+      note: "",
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    }),
+  );
+  await assertFails(
+    updateDoc(doc(mentorDb, "timeEntries", "mentee-shift"), {
+      startedAt,
+      endedAt,
+      note: "Not my record",
+      updatedAt: serverTimestamp(),
+    }),
+  );
+});
+
+test("director can review and correct student time", async () => {
+  const directorDb = authenticated(identities.director);
+  await assertSucceeds(
+    getDoc(doc(directorDb, "timeEntries", "mentee-shift")),
+  );
+  await assertSucceeds(
+    updateDoc(doc(directorDb, "timeEntries", "mentee-shift"), {
+      startedAt: Timestamp.fromDate(new Date("2026-08-28T15:15:00Z")),
+      endedAt: Timestamp.fromDate(new Date("2026-08-28T17:00:00Z")),
+      note: "Faculty correction",
+      updatedAt: serverTimestamp(),
+    }),
+  );
+});
+
+test("only directors manage manual Gold and Silver skill credentials", async () => {
+  const directorDb = authenticated(identities.director);
+  const mentorDb = authenticated(identities.mentor);
+  const credentialId = `${identities.mentor.uid}_camera-skill`;
+  const credential = {
+    workerId: identities.mentor.uid,
+    workerName: identities.mentor.displayName,
+    skillId: "camera-skill",
+    level: "Gold",
+    note: "Can train other student workers",
+    awardedBy: identities.director.uid,
+    awardedByName: identities.director.displayName,
+    updatedAt: serverTimestamp(),
+  };
+
+  await assertSucceeds(
+    setDoc(doc(directorDb, "skillCredentials", credentialId), credential),
+  );
+  await assertSucceeds(
+    getDoc(doc(mentorDb, "skillCredentials", credentialId)),
+  );
+  await assertFails(
+    setDoc(doc(mentorDb, "skillCredentials", credentialId), {
+      ...credential,
+      awardedBy: identities.mentor.uid,
+      awardedByName: identities.mentor.displayName,
+      updatedAt: serverTimestamp(),
+    }),
+  );
+  await assertFails(
+    deleteDoc(doc(mentorDb, "skillCredentials", credentialId)),
   );
 });
 

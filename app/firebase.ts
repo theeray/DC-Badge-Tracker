@@ -23,6 +23,7 @@ import {
   query,
   serverTimestamp,
   setDoc,
+  Timestamp,
   updateDoc,
   where,
   writeBatch,
@@ -72,6 +73,35 @@ export type Endorsement = {
   skillId: string;
   mentorId: string;
   mentorName: string;
+};
+
+export type ProgressRecord = {
+  ownerId: string;
+  statuses: Record<string, SkillStatus>;
+};
+
+export type TimeEntry = {
+  id: string;
+  workerId: string;
+  workerName: string;
+  startedAt: Date;
+  endedAt: Date | null;
+  note: string;
+};
+
+export type TimeEntryDraft = Omit<TimeEntry, "id">;
+
+export type CredentialLevel = "Silver" | "Gold";
+
+export type SkillCredential = {
+  id: string;
+  workerId: string;
+  workerName: string;
+  skillId: string;
+  level: CredentialLevel;
+  note: string;
+  awardedBy: string;
+  awardedByName: string;
 };
 
 export type AuthSession = {
@@ -267,6 +297,43 @@ export function watchEndorsements(
   );
 }
 
+export function watchAllProgress(
+  onChange: (records: Record<string, ProgressRecord>) => void,
+  onError: (message: string) => void,
+) {
+  return onSnapshot(
+    collection(db, "progress"),
+    (snapshot) => {
+      const records: Record<string, ProgressRecord> = {};
+      for (const item of snapshot.docs) {
+        records[item.id] = {
+          ownerId: String(item.data().ownerId ?? item.id),
+          statuses: (item.data().statuses ?? {}) as Record<string, SkillStatus>,
+        };
+      }
+      onChange(records);
+    },
+    (error) => onError(readableFirebaseError(error)),
+  );
+}
+
+export function watchAllEndorsements(
+  onChange: (endorsements: Endorsement[]) => void,
+  onError: (message: string) => void,
+) {
+  return onSnapshot(
+    collection(db, "endorsements"),
+    (snapshot) =>
+      onChange(
+        snapshot.docs.map((item) => ({
+          id: item.id,
+          ...(item.data() as Omit<Endorsement, "id">),
+        })),
+      ),
+    (error) => onError(readableFirebaseError(error)),
+  );
+}
+
 export async function addEndorsement(
   menteeId: string,
   skillId: string,
@@ -419,6 +486,132 @@ export async function restoreMenteeProgress(menteeId: string) {
   });
   batch.delete(backupReference);
   await batch.commit();
+}
+
+function timestampToDate(value: unknown) {
+  return value instanceof Timestamp ? value.toDate() : new Date(0);
+}
+
+function timeEntryFromDocument(id: string, data: DocumentData): TimeEntry {
+  return {
+    id,
+    workerId: String(data.workerId ?? ""),
+    workerName: String(data.workerName ?? "Digital Corps worker"),
+    startedAt: timestampToDate(data.startedAt),
+    endedAt: data.endedAt instanceof Timestamp ? data.endedAt.toDate() : null,
+    note: String(data.note ?? ""),
+  };
+}
+
+export function watchTimeEntries(
+  profile: UserProfile,
+  onChange: (entries: TimeEntry[]) => void,
+  onError: (message: string) => void,
+) {
+  const source =
+    profile.role === "director"
+      ? collection(db, "timeEntries")
+      : query(
+          collection(db, "timeEntries"),
+          where("workerId", "==", profile.uid),
+        );
+  return onSnapshot(
+    source,
+    (snapshot) =>
+      onChange(
+        snapshot.docs
+          .map((item) => timeEntryFromDocument(item.id, item.data()))
+          .sort((a, b) => b.startedAt.getTime() - a.startedAt.getTime()),
+      ),
+    (error) => onError(readableFirebaseError(error)),
+  );
+}
+
+export async function createTimeEntry(entry: TimeEntryDraft) {
+  const reference = doc(collection(db, "timeEntries"));
+  await setDoc(reference, {
+    workerId: entry.workerId,
+    workerName: entry.workerName,
+    startedAt: Timestamp.fromDate(entry.startedAt),
+    endedAt: entry.endedAt ? Timestamp.fromDate(entry.endedAt) : null,
+    note: entry.note.trim(),
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  });
+  return reference.id;
+}
+
+export async function updateTimeEntry(
+  id: string,
+  updates: Pick<TimeEntry, "startedAt" | "endedAt" | "note">,
+) {
+  await updateDoc(doc(db, "timeEntries", id), {
+    startedAt: Timestamp.fromDate(updates.startedAt),
+    endedAt: updates.endedAt ? Timestamp.fromDate(updates.endedAt) : null,
+    note: updates.note.trim(),
+    updatedAt: serverTimestamp(),
+  });
+}
+
+export async function deleteTimeEntry(id: string) {
+  await deleteDoc(doc(db, "timeEntries", id));
+}
+
+function credentialFromDocument(
+  id: string,
+  data: DocumentData,
+): SkillCredential {
+  return {
+    id,
+    workerId: String(data.workerId ?? ""),
+    workerName: String(data.workerName ?? "Digital Corps worker"),
+    skillId: String(data.skillId ?? ""),
+    level: data.level as CredentialLevel,
+    note: String(data.note ?? ""),
+    awardedBy: String(data.awardedBy ?? ""),
+    awardedByName: String(data.awardedByName ?? "Faculty director"),
+  };
+}
+
+export function watchSkillCredentials(
+  onChange: (credentials: SkillCredential[]) => void,
+  onError: (message: string) => void,
+) {
+  return onSnapshot(
+    collection(db, "skillCredentials"),
+    (snapshot) =>
+      onChange(
+        snapshot.docs.map((item) =>
+          credentialFromDocument(item.id, item.data()),
+        ),
+      ),
+    (error) => onError(readableFirebaseError(error)),
+  );
+}
+
+export async function saveSkillCredential(
+  worker: UserProfile,
+  skillId: string,
+  level: CredentialLevel,
+  note: string,
+  director: UserProfile,
+) {
+  const id = `${worker.uid}_${skillId}`;
+  await setDoc(doc(db, "skillCredentials", id), {
+    workerId: worker.uid,
+    workerName: worker.displayName,
+    skillId,
+    level,
+    note: note.trim(),
+    awardedBy: director.uid,
+    awardedByName: director.displayName,
+    updatedAt: serverTimestamp(),
+  });
+  return id;
+}
+
+export async function removeSkillCredential(id: string) {
+  await deleteDoc(doc(db, "skillCredentials", id));
 }
 
 export function readableFirebaseError(error: unknown) {

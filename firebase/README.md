@@ -17,6 +17,8 @@ The application never stores passwords. Firebase Authentication handles password
 - `users/{uid}`: `displayName`, `email`, `role`, `active`, `createdAt`, `updatedAt`
 - `progress/{menteeUid}`: `ownerId`, `statuses`, `updatedAt`
 - `endorsements/{menteeUid_skillId_mentorUid}`: `menteeId`, `skillId`, `mentorId`, `mentorName`, `createdAt`
+- `timeEntries/{entryId}`: `workerId`, `workerName`, `startedAt`, `endedAt`, `note`, `createdAt`, `updatedAt`
+- `skillCredentials/{workerUid_skillId}`: `workerId`, `workerName`, `skillId`, `level`, `note`, `awardedBy`, `awardedByName`, `updatedAt`
 
 Roles are `mentee`, `mentor`, and `director`.
 
@@ -26,8 +28,15 @@ Roles are `mentee`, `mentor`, and `director`.
 - Mentees can create and update only their own progress document.
 - Mentors can read mentee progress and create endorsements only for skills marked `ready` or `complete`.
 - Mentors cannot change progress and can delete only their own endorsements.
-- Directors manage approvals, profiles, progress, and endorsements.
+- Student mentors and mentees can create, correct, and remove only their own time entries.
+- Directors can review and correct all time entries.
+- Mentors can read the team skills dashboard; directors can also assign or correct Gold and Silver statuses.
+- Directors manage approvals, profiles, progress, endorsements, time entries, and skill credentials.
 - User roles cannot be self-promoted.
+
+## Account continuity across hosting domains
+
+GitHub stores source code and Firebase Hosting serves the built app, but Firebase Authentication remains in this same Firebase project. Existing members do not create another account after the hosting move. They choose **Sign in** and use their existing institutional email and password. A one-time sign-in is expected on the new web address because browser sessions do not transfer between domains; verified-email status, role, progress, and endorsements remain intact.
 
 Deploy `firestore.rules` and `firestore.indexes.json` before inviting pilot users.
 

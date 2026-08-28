@@ -21,6 +21,8 @@
     "app/data.ts",
     "app/firebase-entry.tsx",
     "app/firebase.ts",
+    "app/skills-dashboard.tsx",
+    "app/time-tracker.tsx",
     "app/tracker.tsx",
     "firebase.vite.config.ts"
   ]

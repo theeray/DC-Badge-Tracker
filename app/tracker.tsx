@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useState } from "react";
 import AdminPanel from "./admin-panel";
 import AuthPanel from "./auth-panel";
+import SkillsDashboard from "./skills-dashboard";
+import TimeTracker from "./time-tracker";
 import {
   allSkills,
   learningAreas,
@@ -694,6 +696,16 @@ function TrackerWorkspace({
           <button className={view === "brand-guides" ? "active" : ""} onClick={() => setActiveView("brand-guides")}>
             <span className="nav-index">◈</span><span>Brand guides</span><em>{brandGuides.length}</em>
           </button>
+          {session ? (
+            <button className={view === "time-clock" ? "active" : ""} onClick={() => setActiveView("time-clock")}>
+              <span className="nav-index">◷</span><span>Time clock</span>
+            </button>
+          ) : null}
+          {isReviewer ? (
+            <button className={view === "skills-dashboard" ? "active" : ""} onClick={() => setActiveView("skills-dashboard")}>
+              <span className="nav-index">▦</span><span>Team skills</span>
+            </button>
+          ) : null}
           {role === "director" ? (
             <button className={view === "admin" ? "active" : ""} onClick={() => setActiveView("admin")}>
               <span className="nav-index">⚙</span><span>Accounts & records</span>
@@ -875,6 +887,14 @@ function TrackerWorkspace({
 
           {view === "admin" && role === "director" && session ? (
             <AdminPanel currentDirector={session.profile} />
+          ) : null}
+
+          {view === "time-clock" && session ? (
+            <TimeTracker session={session} />
+          ) : null}
+
+          {view === "skills-dashboard" && isReviewer && session ? (
+            <SkillsDashboard session={session} />
           ) : null}
 
           {activeArea ? (
@@ -1168,6 +1188,12 @@ function TrackerWorkspace({
           <button className={learningAreas.some((area) => area.id === view) ? "active" : ""} onClick={() => setActiveView("content-creation")}><span>◫</span>Skills</button>
           <button className={view === "projects" ? "active" : ""} onClick={() => setActiveView("projects")}><span>◆</span>Projects</button>
           <button className={view === "brand-guides" ? "active" : ""} onClick={() => setActiveView("brand-guides")}><span>◈</span>Brand</button>
+          {session ? (
+            <button className={view === "time-clock" ? "active" : ""} onClick={() => setActiveView("time-clock")}><span>◷</span>Hours</button>
+          ) : null}
+          {isReviewer ? (
+            <button className={view === "skills-dashboard" ? "active" : ""} onClick={() => setActiveView("skills-dashboard")}><span>▦</span>Team</button>
+          ) : null}
           {role === "director" ? (
             <button className={view === "admin" ? "active" : ""} onClick={() => setActiveView("admin")}><span>⚙</span>Admin</button>
           ) : null}

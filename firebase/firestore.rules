@@ -46,6 +46,60 @@ service cloud.firestore {
       return activeUser() && currentUser().role == 'director';
     }
 
+    function isStudentWorker() {
+      return activeUser() && currentUser().role in ['mentee', 'mentor'];
+    }
+
+    function validTimeEntry() {
+      return request.resource.data.workerId is string
+        && request.resource.data.workerName is string
+        && exists(userPath(request.resource.data.workerId))
+        && get(userPath(request.resource.data.workerId)).data.active == true
+        && get(userPath(request.resource.data.workerId)).data.role in ['mentee', 'mentor']
+        && request.resource.data.startedAt is timestamp
+        && (request.resource.data.endedAt == null
+          || request.resource.data.endedAt is timestamp)
+        && (request.resource.data.endedAt == null
+          || request.resource.data.endedAt > request.resource.data.startedAt)
+        && request.resource.data.note is string
+        && request.resource.data.note.size() <= 160
+        && request.resource.data.updatedAt == request.time
+        && request.resource.data.keys().hasOnly([
+          'workerId',
+          'workerName',
+          'startedAt',
+          'endedAt',
+          'note',
+          'createdAt',
+          'updatedAt'
+        ]);
+    }
+
+    function validSkillCredential() {
+      return request.resource.data.workerId is string
+        && request.resource.data.workerName is string
+        && exists(userPath(request.resource.data.workerId))
+        && get(userPath(request.resource.data.workerId)).data.active == true
+        && get(userPath(request.resource.data.workerId)).data.role in ['mentee', 'mentor']
+        && request.resource.data.skillId is string
+        && request.resource.data.level in ['Silver', 'Gold']
+        && request.resource.data.note is string
+        && request.resource.data.note.size() <= 160
+        && request.resource.data.awardedBy == request.auth.uid
+        && request.resource.data.awardedByName is string
+        && request.resource.data.updatedAt == request.time
+        && request.resource.data.keys().hasOnly([
+          'workerId',
+          'workerName',
+          'skillId',
+          'level',
+          'note',
+          'awardedBy',
+          'awardedByName',
+          'updatedAt'
+        ]);
+    }
+
     function approvedForSelf() {
       return verifiedEmail()
         && exists(approvalPath(request.auth.token.email))
@@ -143,6 +197,38 @@ service cloud.firestore {
       allow update: if false;
       allow delete: if isDirector()
         || (isMentor() && resource.data.mentorId == request.auth.uid);
+    }
+
+    match /timeEntries/{entryId} {
+      allow read: if activeUser()
+        && (isDirector() || resource.data.workerId == request.auth.uid);
+
+      allow create: if (isDirector()
+          || (isStudentWorker()
+            && request.resource.data.workerId == request.auth.uid))
+        && validTimeEntry()
+        && request.resource.data.createdAt == request.time;
+
+      allow update: if (isDirector()
+          || (isStudentWorker()
+            && resource.data.workerId == request.auth.uid
+            && request.resource.data.workerId == resource.data.workerId))
+        && validTimeEntry()
+        && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.workerId == resource.data.workerId
+        && request.resource.data.workerName == resource.data.workerName;
+
+      allow delete: if isDirector()
+        || (isStudentWorker() && resource.data.workerId == request.auth.uid);
+    }
+
+    match /skillCredentials/{credentialId} {
+      allow read: if activeUser()
+        && (isMentor()
+          || isDirector()
+          || resource.data.workerId == request.auth.uid);
+      allow create, update: if isDirector() && validSkillCredential();
+      allow delete: if isDirector();
     }
 
     match /{document=**} {
