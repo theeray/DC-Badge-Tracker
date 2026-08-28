@@ -18,18 +18,11 @@ npm install
 npm run dev
 ```
 
-The Sites build can be checked with:
+Verify the Firebase production build with:
 
 ```bash
 npm run build
 npm test
-```
-
-The standalone Firebase Hosting build can be checked with:
-
-```bash
-npm run typecheck:firebase
-npm run build:firebase
 ```
 
 ## Firebase deployment
@@ -41,5 +34,9 @@ npm run deploy:firebase
 ```
 
 The deploy command builds the static app, then publishes Firebase Hosting, Firestore rules, and Firestore indexes. Account approval records are operational data and are intentionally not committed to this public repository.
+
+Production app: https://digital-corps-badge-tracker.web.app
+
+Source repository: https://github.com/theeray/DC-Badge-Tracker
 
 See [`firebase/README.md`](firebase/README.md) for the production activation and pilot-test checklist.

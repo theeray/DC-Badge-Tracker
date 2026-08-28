@@ -59,8 +59,10 @@ service cloud.firestore {
     }
 
     match /users/{uid} {
-      allow get: if activeUser()
-        && (request.auth.uid == uid || isMentor() || isDirector());
+      allow get: if (verifiedEmail()
+          && request.auth.uid == uid
+          && approvedForSelf())
+        || (activeUser() && (isMentor() || isDirector()));
       allow list: if isMentor() || isDirector();
 
       allow create: if signedIn()

@@ -190,6 +190,40 @@ test("an unapproved account cannot create a profile", async () => {
   );
 });
 
+test("a verified approved account can bootstrap its own profile", async () => {
+  const approved = {
+    uid: "approved-new-1",
+    email: "approved-new@bemidjistate.edu",
+    displayName: "Approved New User",
+    role: "director",
+  };
+  await environment.withSecurityRulesDisabled(async (context) => {
+    await setDoc(doc(context.firestore(), "approvedUsers", approved.email), {
+      email: approved.email,
+      displayName: approved.displayName,
+      role: approved.role,
+      active: true,
+    });
+  });
+
+  const approvedDb = environment.authenticatedContext(approved.uid, {
+    email: approved.email,
+    email_verified: true,
+  }).firestore();
+  const profileReference = doc(approvedDb, "users", approved.uid);
+  await assertSucceeds(getDoc(profileReference));
+  await assertSucceeds(
+    setDoc(profileReference, {
+      displayName: approved.displayName,
+      email: approved.email,
+      role: approved.role,
+      active: true,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    }),
+  );
+});
+
 test("a member cannot promote their own role", async () => {
   const menteeDb = authenticated(identities.mentee);
   await assertFails(

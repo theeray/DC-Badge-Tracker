@@ -119,10 +119,17 @@ export async function signInWithInstitutionalEmail(
   );
   await reload(credential.user);
   if (!credential.user.emailVerified) {
-    await signOut(auth);
-    throw new Error(
-      "Please verify your institutional email before signing in. Check your inbox for Firebase's verification message.",
-    );
+    let message =
+      "Verification email sent. Open it in your institutional inbox, verify the address, then sign in again.";
+    try {
+      await sendEmailVerification(credential.user);
+    } catch {
+      message =
+        "Please verify your institutional email before signing in. If the verification message is not in your inbox, wait a moment and try signing in again to resend it.";
+    } finally {
+      await signOut(auth);
+    }
+    throw new Error(message);
   }
   return credential.user;
 }
