@@ -42,6 +42,7 @@ export const learningAreas: LearningArea[] = [
     eyebrow: "Start here",
     description: "Core tools, client-ready habits, and the final-project quality checklist.",
     skills: [
+      skill(ONBOARDING, "Training & Skill Building", "on-work-study-eligibility", "Check Work-Study Eligibility", { href: "https://www.iorad.com/player/2450841/Check-to-see-if-you-are-eligible-for-Work-Study---Payroll-at-Bemidji-State-University" }),
       skill(ONBOARDING, "Training & Skill Building", "on-payroll", "Work Study & Payroll Paperwork", { href: "https://www.iorad.com/player/2432928/Fill-Out-Work-Study---Payroll-Paperwork-for-Digital-Corps", initialStatus: "complete", initialEndorsements: 1 }),
       skill(ONBOARDING, "Training & Skill Building", "on-files", "File Organization Guide", { internal: true, initialStatus: "complete", initialEndorsements: 2 }),
       skill(ONBOARDING, "Training & Skill Building", "on-planner", "Use MS Teams Planner", { href: "https://youtu.be/r3dpzqttDuA", initialStatus: "complete", initialEndorsements: 1 }),
