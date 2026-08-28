@@ -66,6 +66,9 @@ export default function TimeTracker({ session }: { session: AuthSession }) {
   const [workerFilter, setWorkerFilter] = useState(
     isStudentWorker ? profile.uid : "all",
   );
+  const [clockWorkerId, setClockWorkerId] = useState(
+    isStudentWorker ? profile.uid : "",
+  );
   const [now, setNow] = useState(Date.now());
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
@@ -106,6 +109,11 @@ export default function TimeTracker({ session }: { session: AuthSession }) {
           (user) => user.active && user.role !== "director",
         );
         setWorkers(studentWorkers);
+        setClockWorkerId((current) =>
+          studentWorkers.some((user) => user.uid === current)
+            ? current
+            : (studentWorkers[0]?.uid ?? ""),
+        );
         setDraftWorkerId((current) =>
           studentWorkers.some((user) => user.uid === current)
             ? current
@@ -116,9 +124,13 @@ export default function TimeTracker({ session }: { session: AuthSession }) {
     );
   }, [isDirector, profile]);
 
-  const activeEntry = isStudentWorker
+  const clockWorker = isStudentWorker
+    ? profile
+    : workers.find((worker) => worker.uid === clockWorkerId);
+  const activeEntry = clockWorker
     ? entries.find(
-        (entry) => entry.workerId === profile.uid && entry.endedAt === null,
+        (entry) =>
+          entry.workerId === clockWorker.uid && entry.endedAt === null,
       )
     : undefined;
   const filteredEntries = useMemo(
@@ -136,6 +148,15 @@ export default function TimeTracker({ session }: { session: AuthSession }) {
   const todayMilliseconds = filteredEntries
     .filter((entry) => entry.startedAt.getTime() >= todayStart)
     .reduce((sum, entry) => sum + durationFor(entry, now), 0);
+  const clockWorkerTodayMilliseconds = clockWorker
+    ? entries
+        .filter(
+          (entry) =>
+            entry.workerId === clockWorker.uid &&
+            entry.startedAt.getTime() >= todayStart,
+        )
+        .reduce((sum, entry) => sum + durationFor(entry, now), 0)
+    : 0;
   const activeCount = entries.filter((entry) => entry.endedAt === null).length;
 
   const beginNewEntry = () => {
@@ -165,18 +186,24 @@ export default function TimeTracker({ session }: { session: AuthSession }) {
   };
 
   const clockIn = async () => {
-    if (!isStudentWorker || activeEntry || busy) return;
+    if (!clockWorker || activeEntry || busy) return;
     setBusy(true);
     try {
       const startedAt = new Date();
       const id = await createTimeEntry({
-        workerId: profile.uid,
-        workerName: profile.displayName,
+        workerId: clockWorker.uid,
+        workerName: clockWorker.displayName,
         startedAt,
         endedAt: null,
-        note: "",
+        note: isDirector
+          ? `Started by faculty director ${profile.displayName}`
+          : "",
       });
-      setMessage(`Clocked in at ${formatDateTime(startedAt)}.`);
+      setMessage(
+        isDirector
+          ? `${clockWorker.displayName} was clocked in at ${formatDateTime(startedAt)}.`
+          : `Clocked in at ${formatDateTime(startedAt)}.`,
+      );
       setUndoAction({
         message: "Clock-in recorded.",
         run: () => deleteTimeEntry(id),
@@ -199,7 +226,11 @@ export default function TimeTracker({ session }: { session: AuthSession }) {
         endedAt,
         note: activeEntry.note,
       });
-      setMessage(`Clocked out at ${formatDateTime(endedAt)}.`);
+      setMessage(
+        isDirector && clockWorker
+          ? `${clockWorker.displayName} was clocked out at ${formatDateTime(endedAt)}.`
+          : `Clocked out at ${formatDateTime(endedAt)}.`,
+      );
       setUndoAction({
         message: "Clock-out recorded.",
         run: () =>
@@ -324,27 +355,48 @@ export default function TimeTracker({ session }: { session: AuthSession }) {
           <h1>{isDirector ? "Student hours dashboard" : "Your Digital Corps time clock"}</h1>
           <p>
             {isDirector
-              ? "Review active shifts, weekly totals, and corrected entries for student mentors and mentees."
+              ? "Select a student to start or stop a live shift, then review active timers, weekly totals, and corrected entries."
               : "Clock in when you begin work, clock out when you finish, and correct an entry if you forgot or left the timer running."}
           </p>
         </div>
-        {isStudentWorker ? (
+        {clockWorker ? (
           <div className={`clock-card ${activeEntry ? "clock-running" : ""}`}>
+            {isDirector ? (
+              <label className="director-clock-worker">
+                <span>Record a live shift for</span>
+                <select
+                  value={clockWorkerId}
+                  onChange={(event) => setClockWorkerId(event.target.value)}
+                  disabled={busy}
+                >
+                  {workers.map((worker) => (
+                    <option value={worker.uid} key={worker.uid}>{worker.displayName}</option>
+                  ))}
+                </select>
+              </label>
+            ) : null}
             <span>{activeEntry ? "Currently on the clock" : "Currently off the clock"}</span>
             <strong>
               {activeEntry
                 ? formatDuration(durationFor(activeEntry, now))
-                : formatDuration(todayMilliseconds)}
+                : formatDuration(clockWorkerTodayMilliseconds)}
             </strong>
-            <small>{activeEntry ? `Started ${formatDateTime(activeEntry.startedAt)}` : "Today’s recorded time"}</small>
+            <small>
+              {activeEntry
+                ? `Started ${formatDateTime(activeEntry.startedAt)}`
+                : `${clockWorker.displayName} · today’s recorded time`}
+            </small>
             <button
               type="button"
               className={activeEntry ? "clock-out-button" : "clock-in-button"}
               onClick={() => void (activeEntry ? clockOut() : clockIn())}
               disabled={busy}
             >
-              {activeEntry ? "Clock out" : "Clock in"}
+              {activeEntry
+                ? isDirector ? "Stop live shift" : "Clock out"
+                : isDirector ? "Start live shift" : "Clock in"}
             </button>
+            {isDirector ? <small>{activeCount} student shift{activeCount === 1 ? "" : "s"} active now</small> : null}
           </div>
         ) : (
           <div className="clock-card director-clock-card">
