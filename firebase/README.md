@@ -19,6 +19,8 @@ The application never stores passwords. Firebase Authentication handles password
 - `endorsements/{menteeUid_skillId_mentorUid}`: `menteeId`, `skillId`, `mentorId`, `mentorName`, `createdAt`
 - `timeEntries/{entryId}`: `workerId`, `workerName`, `startedAt`, `endedAt`, `note`, `createdAt`, `updatedAt`
 - `skillCredentials/{workerUid_skillId}`: `workerId`, `workerName`, `skillId`, `level`, `note`, `awardedBy`, `awardedByName`, `updatedAt`
+- `skillAssignments/{workerUid_skillId}`: `assigneeId`, `assigneeName`, `skillId`, `note`, `status`, `assignedBy`, `assignedByName`, `assignedByRole`, `createdAt`, `updatedAt`
+- `selfReportedSkills/{workerUid_skillId}`: `memberId`, `memberName`, `skillId`, `level`, `evidence`, `createdAt`, `updatedAt`
 
 Roles are `mentee`, `mentor`, and `director`.
 
@@ -31,6 +33,8 @@ Roles are `mentee`, `mentor`, and `director`.
 - Student mentors and mentees can create, correct, and remove only their own time entries.
 - Directors can review and correct all time entries.
 - Mentors can read the team skills dashboard; directors can also assign or correct Gold and Silver statuses.
+- Mentors and directors can assign skills or tutorials to active student workers. Mentors manage only assignments they created; assignees manage only assignment status; directors can correct any assignment.
+- Student workers can create, edit, and remove only their own Silver and Gold self-reports. Self-reports remain visibly distinct from mentor endorsements and faculty verification.
 - Directors manage approvals, profiles, progress, endorsements, time entries, and skill credentials.
 - User roles cannot be self-promoted.
 
@@ -49,6 +53,8 @@ Deploy `firestore.rules` and `firestore.indexes.json` before inviting pilot user
 5. Mark a skill `ready`, add an endorsement, and confirm it appears for the mentee.
 6. Confirm the mentor cannot endorse a skill still marked `not-started` or `in-progress`.
 7. Confirm a director can pause an account and administer records.
-8. Invite the remaining approved users only after the checks pass.
+8. Assign one tutorial as a mentor, update its status as the assignee, and confirm another mentor cannot edit the assignment.
+9. Self-report one Silver or Gold badge and confirm Team Skills labels it as self-reported until endorsement or faculty verification is present.
+10. Invite the remaining approved users only after the checks pass.
 
 Account names and institutional email addresses are live operational data and must not be committed to this public repository.

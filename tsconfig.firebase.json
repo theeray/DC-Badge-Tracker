@@ -21,6 +21,7 @@
     "app/data.ts",
     "app/firebase-entry.tsx",
     "app/firebase.ts",
+    "app/member-development.tsx",
     "app/skills-dashboard.tsx",
     "app/time-tracker.tsx",
     "app/tracker.tsx",

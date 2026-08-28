@@ -28,19 +28,25 @@ let environment;
 const identities = {
   director: {
     uid: "director-1",
-    email: "director@bemidjistate.edu",
+    email: "director@example.edu",
     role: "director",
     displayName: "Faculty Director",
   },
   mentor: {
     uid: "mentor-1",
-    email: "mentor@my.rctc.edu",
+    email: "mentor@example.edu",
     role: "mentor",
     displayName: "Student Mentor",
   },
+  mentor2: {
+    uid: "mentor-2",
+    email: "mentor2@example.edu",
+    role: "mentor",
+    displayName: "Second Student Mentor",
+  },
   mentee: {
     uid: "mentee-1",
-    email: "mentee@live.bemidjistate.edu",
+    email: "mentee@example.edu",
     role: "mentee",
     displayName: "Student Mentee",
   },
@@ -296,10 +302,156 @@ test("only directors manage manual Gold and Silver skill credentials", async () 
   );
 });
 
+test("mentors and directors can assign learning to active student members", async () => {
+  const mentorDb = authenticated(identities.mentor);
+  const directorDb = authenticated(identities.director);
+  const assignment = {
+    assigneeId: identities.mentee.uid,
+    assigneeName: identities.mentee.displayName,
+    skillId: "camera-skill",
+    note: "Practice before the next client interview",
+    status: "assigned",
+    assignedBy: identities.mentor.uid,
+    assignedByName: identities.mentor.displayName,
+    assignedByRole: "mentor",
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  };
+
+  await assertSucceeds(
+    setDoc(doc(mentorDb, "skillAssignments", "mentee-camera"), assignment),
+  );
+  await assertSucceeds(
+    setDoc(doc(mentorDb, "skillAssignments", "mentor-tutorial"), {
+      ...assignment,
+      assigneeId: identities.mentor2.uid,
+      assigneeName: identities.mentor2.displayName,
+      skillId: "payroll-tutorial",
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    }),
+  );
+  await assertSucceeds(
+    updateDoc(doc(directorDb, "skillAssignments", "mentee-camera"), {
+      status: "ready",
+      updatedAt: serverTimestamp(),
+    }),
+  );
+});
+
+test("assignees update assignment status without changing staff instructions", async () => {
+  const menteeDb = authenticated(identities.mentee);
+  await assertSucceeds(
+    getDocs(
+      query(
+        collection(menteeDb, "skillAssignments"),
+        where("assigneeId", "==", identities.mentee.uid),
+      ),
+    ),
+  );
+  await assertSucceeds(
+    updateDoc(doc(menteeDb, "skillAssignments", "mentee-camera"), {
+      status: "in-progress",
+      updatedAt: serverTimestamp(),
+    }),
+  );
+  await assertFails(
+    updateDoc(doc(menteeDb, "skillAssignments", "mentee-camera"), {
+      note: "I removed the instructions",
+      updatedAt: serverTimestamp(),
+    }),
+  );
+});
+
+test("mentors manage only assignments they created", async () => {
+  const mentorDb = authenticated(identities.mentor);
+  const secondMentorDb = authenticated(identities.mentor2);
+  await assertSucceeds(
+    updateDoc(doc(mentorDb, "skillAssignments", "mentee-camera"), {
+      note: "Updated practice instructions",
+      updatedAt: serverTimestamp(),
+    }),
+  );
+  await assertFails(
+    updateDoc(doc(mentorDb, "skillAssignments", "mentee-camera"), {
+      status: "complete",
+      updatedAt: serverTimestamp(),
+    }),
+  );
+  await assertFails(
+    updateDoc(doc(secondMentorDb, "skillAssignments", "mentee-camera"), {
+      note: "Not my assignment",
+      updatedAt: serverTimestamp(),
+    }),
+  );
+  await assertFails(
+    deleteDoc(doc(secondMentorDb, "skillAssignments", "mentee-camera")),
+  );
+});
+
+test("student workers self-report their own badges and staff see the claim", async () => {
+  const menteeDb = authenticated(identities.mentee);
+  const mentorDb = authenticated(identities.mentor);
+  const report = {
+    memberId: identities.mentee.uid,
+    memberName: identities.mentee.displayName,
+    skillId: "poster-design",
+    level: "Gold",
+    evidence: "Designed two client posters and trained another student",
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  };
+
+  await assertSucceeds(
+    setDoc(doc(menteeDb, "selfReportedSkills", "mentee-poster"), report),
+  );
+  await assertSucceeds(
+    getDoc(doc(mentorDb, "selfReportedSkills", "mentee-poster")),
+  );
+  await assertFails(
+    updateDoc(doc(mentorDb, "selfReportedSkills", "mentee-poster"), {
+      level: "Silver",
+      updatedAt: serverTimestamp(),
+    }),
+  );
+  await assertFails(
+    setDoc(doc(menteeDb, "selfReportedSkills", "forged-report"), {
+      ...report,
+      memberId: identities.mentor2.uid,
+      memberName: identities.mentor2.displayName,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    }),
+  );
+  await assertFails(
+    updateDoc(doc(menteeDb, "selfReportedSkills", "mentee-poster"), {
+      level: "Platinum",
+      updatedAt: serverTimestamp(),
+    }),
+  );
+});
+
+test("faculty directors can correct or remove assignments and self-reports", async () => {
+  const directorDb = authenticated(identities.director);
+  await assertSucceeds(
+    updateDoc(doc(directorDb, "selfReportedSkills", "mentee-poster"), {
+      level: "Silver",
+      evidence: "Faculty correction after review",
+      updatedAt: serverTimestamp(),
+    }),
+  );
+  await assertSucceeds(
+    deleteDoc(doc(directorDb, "skillAssignments", "mentor-tutorial")),
+  );
+  await assertSucceeds(
+    deleteDoc(doc(directorDb, "selfReportedSkills", "mentee-poster")),
+  );
+});
+
 test("an unapproved account cannot create a profile", async () => {
   const unapproved = {
     uid: "unapproved-1",
-    email: "not-approved@live.bemidjistate.edu",
+    email: "not-approved@example.edu",
   };
   const unapprovedDb = environment.authenticatedContext(unapproved.uid, {
     email: unapproved.email,
@@ -320,7 +472,7 @@ test("an unapproved account cannot create a profile", async () => {
 test("a verified approved account can bootstrap its own profile", async () => {
   const approved = {
     uid: "approved-new-1",
-    email: "approved-new@bemidjistate.edu",
+    email: "approved-new@example.edu",
     displayName: "Approved New User",
     role: "director",
   };

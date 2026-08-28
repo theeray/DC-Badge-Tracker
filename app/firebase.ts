@@ -104,6 +104,33 @@ export type SkillCredential = {
   awardedByName: string;
 };
 
+export type AssignmentStatus =
+  | "assigned"
+  | "in-progress"
+  | "ready"
+  | "complete";
+
+export type SkillAssignment = {
+  id: string;
+  assigneeId: string;
+  assigneeName: string;
+  skillId: string;
+  note: string;
+  status: AssignmentStatus;
+  assignedBy: string;
+  assignedByName: string;
+  assignedByRole: "mentor" | "director";
+};
+
+export type SelfReportedSkill = {
+  id: string;
+  memberId: string;
+  memberName: string;
+  skillId: string;
+  level: CredentialLevel;
+  evidence: string;
+};
+
 export type AuthSession = {
   user: User;
   profile: UserProfile;
@@ -589,6 +616,26 @@ export function watchSkillCredentials(
   );
 }
 
+export function watchMemberSkillCredentials(
+  workerId: string,
+  onChange: (credentials: SkillCredential[]) => void,
+  onError: (message: string) => void,
+) {
+  return onSnapshot(
+    query(
+      collection(db, "skillCredentials"),
+      where("workerId", "==", workerId),
+    ),
+    (snapshot) =>
+      onChange(
+        snapshot.docs.map((item) =>
+          credentialFromDocument(item.id, item.data()),
+        ),
+      ),
+    (error) => onError(readableFirebaseError(error)),
+  );
+}
+
 export async function saveSkillCredential(
   worker: UserProfile,
   skillId: string,
@@ -612,6 +659,204 @@ export async function saveSkillCredential(
 
 export async function removeSkillCredential(id: string) {
   await deleteDoc(doc(db, "skillCredentials", id));
+}
+
+function assignmentFromDocument(
+  id: string,
+  data: DocumentData,
+): SkillAssignment {
+  return {
+    id,
+    assigneeId: String(data.assigneeId ?? ""),
+    assigneeName: String(data.assigneeName ?? "Digital Corps member"),
+    skillId: String(data.skillId ?? ""),
+    note: String(data.note ?? ""),
+    status: data.status as AssignmentStatus,
+    assignedBy: String(data.assignedBy ?? ""),
+    assignedByName: String(data.assignedByName ?? "Digital Corps staff"),
+    assignedByRole: data.assignedByRole as "mentor" | "director",
+  };
+}
+
+export function watchSkillAssignments(
+  profile: UserProfile,
+  onChange: (assignments: SkillAssignment[]) => void,
+  onError: (message: string) => void,
+) {
+  const source =
+    profile.role === "mentor" || profile.role === "director"
+      ? collection(db, "skillAssignments")
+      : query(
+          collection(db, "skillAssignments"),
+          where("assigneeId", "==", profile.uid),
+        );
+  return onSnapshot(
+    source,
+    (snapshot) =>
+      onChange(
+        snapshot.docs
+          .map((item) => assignmentFromDocument(item.id, item.data()))
+          .sort(
+            (a, b) =>
+              a.assigneeName.localeCompare(b.assigneeName) ||
+              a.skillId.localeCompare(b.skillId),
+          ),
+      ),
+    (error) => onError(readableFirebaseError(error)),
+  );
+}
+
+export async function saveSkillAssignment(
+  assignee: UserProfile,
+  skillId: string,
+  note: string,
+  assigner: UserProfile,
+) {
+  if (assigner.role !== "mentor" && assigner.role !== "director") {
+    throw new Error("Only mentors and faculty directors can assign learning.");
+  }
+  const id = `${assignee.uid}_${skillId}`;
+  const reference = doc(db, "skillAssignments", id);
+  const existing = await getDoc(reference);
+  if (existing.exists()) {
+    await updateDoc(reference, {
+      note: note.trim(),
+      updatedAt: serverTimestamp(),
+    });
+  } else {
+    await setDoc(reference, {
+      assigneeId: assignee.uid,
+      assigneeName: assignee.displayName,
+      skillId,
+      note: note.trim(),
+      status: "assigned",
+      assignedBy: assigner.uid,
+      assignedByName: assigner.displayName,
+      assignedByRole: assigner.role,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    });
+  }
+  return id;
+}
+
+export async function updateSkillAssignmentNote(id: string, note: string) {
+  await updateDoc(doc(db, "skillAssignments", id), {
+    note: note.trim(),
+    updatedAt: serverTimestamp(),
+  });
+}
+
+export async function updateSkillAssignmentStatus(
+  id: string,
+  status: AssignmentStatus,
+) {
+  await updateDoc(doc(db, "skillAssignments", id), {
+    status,
+    updatedAt: serverTimestamp(),
+  });
+}
+
+export async function removeSkillAssignment(id: string) {
+  await deleteDoc(doc(db, "skillAssignments", id));
+}
+
+export async function restoreSkillAssignment(assignment: SkillAssignment) {
+  await setDoc(doc(db, "skillAssignments", assignment.id), {
+    assigneeId: assignment.assigneeId,
+    assigneeName: assignment.assigneeName,
+    skillId: assignment.skillId,
+    note: assignment.note,
+    status: assignment.status,
+    assignedBy: assignment.assignedBy,
+    assignedByName: assignment.assignedByName,
+    assignedByRole: assignment.assignedByRole,
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  });
+}
+
+function selfReportedSkillFromDocument(
+  id: string,
+  data: DocumentData,
+): SelfReportedSkill {
+  return {
+    id,
+    memberId: String(data.memberId ?? ""),
+    memberName: String(data.memberName ?? "Digital Corps member"),
+    skillId: String(data.skillId ?? ""),
+    level: data.level as CredentialLevel,
+    evidence: String(data.evidence ?? ""),
+  };
+}
+
+export function watchSelfReportedSkills(
+  profile: UserProfile,
+  onChange: (reports: SelfReportedSkill[]) => void,
+  onError: (message: string) => void,
+) {
+  const source =
+    profile.role === "mentor" || profile.role === "director"
+      ? collection(db, "selfReportedSkills")
+      : query(
+          collection(db, "selfReportedSkills"),
+          where("memberId", "==", profile.uid),
+        );
+  return onSnapshot(
+    source,
+    (snapshot) =>
+      onChange(
+        snapshot.docs.map((item) =>
+          selfReportedSkillFromDocument(item.id, item.data()),
+        ),
+      ),
+    (error) => onError(readableFirebaseError(error)),
+  );
+}
+
+export async function saveSelfReportedSkill(
+  member: UserProfile,
+  skillId: string,
+  level: CredentialLevel,
+  evidence: string,
+) {
+  const id = `${member.uid}_${skillId}`;
+  const reference = doc(db, "selfReportedSkills", id);
+  const existing = await getDoc(reference);
+  if (existing.exists()) {
+    await updateDoc(reference, {
+      level,
+      evidence: evidence.trim(),
+      updatedAt: serverTimestamp(),
+    });
+  } else {
+    await setDoc(reference, {
+      memberId: member.uid,
+      memberName: member.displayName,
+      skillId,
+      level,
+      evidence: evidence.trim(),
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    });
+  }
+  return id;
+}
+
+export async function removeSelfReportedSkill(id: string) {
+  await deleteDoc(doc(db, "selfReportedSkills", id));
+}
+
+export async function restoreSelfReportedSkill(report: SelfReportedSkill) {
+  await setDoc(doc(db, "selfReportedSkills", report.id), {
+    memberId: report.memberId,
+    memberName: report.memberName,
+    skillId: report.skillId,
+    level: report.level,
+    evidence: report.evidence,
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  });
 }
 
 export function readableFirebaseError(error: unknown) {

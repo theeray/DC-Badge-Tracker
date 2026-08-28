@@ -100,6 +100,58 @@ service cloud.firestore {
         ]);
     }
 
+    function validSkillAssignment() {
+      return request.resource.data.assigneeId is string
+        && request.resource.data.assigneeName is string
+        && exists(userPath(request.resource.data.assigneeId))
+        && get(userPath(request.resource.data.assigneeId)).data.active == true
+        && get(userPath(request.resource.data.assigneeId)).data.role in ['mentee', 'mentor']
+        && request.resource.data.skillId is string
+        && request.resource.data.note is string
+        && request.resource.data.note.size() <= 160
+        && request.resource.data.status in ['assigned', 'in-progress', 'ready', 'complete']
+        && request.resource.data.assignedBy is string
+        && request.resource.data.assignedByName is string
+        && request.resource.data.assignedByRole in ['mentor', 'director']
+        && request.resource.data.createdAt is timestamp
+        && request.resource.data.updatedAt == request.time
+        && request.resource.data.keys().hasOnly([
+          'assigneeId',
+          'assigneeName',
+          'skillId',
+          'note',
+          'status',
+          'assignedBy',
+          'assignedByName',
+          'assignedByRole',
+          'createdAt',
+          'updatedAt'
+        ]);
+    }
+
+    function validSelfReportedSkill() {
+      return request.resource.data.memberId is string
+        && request.resource.data.memberName is string
+        && exists(userPath(request.resource.data.memberId))
+        && get(userPath(request.resource.data.memberId)).data.active == true
+        && get(userPath(request.resource.data.memberId)).data.role in ['mentee', 'mentor']
+        && request.resource.data.skillId is string
+        && request.resource.data.level in ['Silver', 'Gold']
+        && request.resource.data.evidence is string
+        && request.resource.data.evidence.size() <= 300
+        && request.resource.data.createdAt is timestamp
+        && request.resource.data.updatedAt == request.time
+        && request.resource.data.keys().hasOnly([
+          'memberId',
+          'memberName',
+          'skillId',
+          'level',
+          'evidence',
+          'createdAt',
+          'updatedAt'
+        ]);
+    }
+
     function approvedForSelf() {
       return verifiedEmail()
         && exists(approvalPath(request.auth.token.email))
@@ -229,6 +281,75 @@ service cloud.firestore {
           || resource.data.workerId == request.auth.uid);
       allow create, update: if isDirector() && validSkillCredential();
       allow delete: if isDirector();
+    }
+
+    match /skillAssignments/{assignmentId} {
+      allow read: if activeUser()
+        && (isMentor()
+          || isDirector()
+          || resource.data.assigneeId == request.auth.uid);
+
+      allow create: if (isMentor() || isDirector())
+        && validSkillAssignment()
+        && request.resource.data.createdAt == request.time
+        && ((isMentor()
+            && request.resource.data.assignedBy == request.auth.uid
+            && request.resource.data.assignedByRole == 'mentor')
+          || (isDirector()
+            && ((request.resource.data.assignedBy == request.auth.uid
+                && request.resource.data.assignedByRole == 'director')
+              || (exists(userPath(request.resource.data.assignedBy))
+                && get(userPath(request.resource.data.assignedBy)).data.role
+                  == request.resource.data.assignedByRole
+                && request.resource.data.assignedByRole in ['mentor', 'director']))));
+
+      allow update: if validSkillAssignment()
+        && request.resource.data.assigneeId == resource.data.assigneeId
+        && request.resource.data.assigneeName == resource.data.assigneeName
+        && request.resource.data.skillId == resource.data.skillId
+        && request.resource.data.assignedBy == resource.data.assignedBy
+        && request.resource.data.assignedByName == resource.data.assignedByName
+        && request.resource.data.assignedByRole == resource.data.assignedByRole
+        && request.resource.data.createdAt == resource.data.createdAt
+        && (isDirector()
+          || (isMentor()
+            && resource.data.assignedBy == request.auth.uid
+            && request.resource.data.diff(resource.data).affectedKeys()
+              .hasOnly(['note', 'updatedAt']))
+          || (isStudentWorker()
+            && resource.data.assigneeId == request.auth.uid
+            && request.resource.data.diff(resource.data).affectedKeys()
+              .hasOnly(['status', 'updatedAt'])));
+
+      allow delete: if isDirector()
+        || (isMentor() && resource.data.assignedBy == request.auth.uid);
+    }
+
+    match /selfReportedSkills/{reportId} {
+      allow read: if activeUser()
+        && (isMentor()
+          || isDirector()
+          || resource.data.memberId == request.auth.uid);
+
+      allow create: if validSelfReportedSkill()
+        && request.resource.data.createdAt == request.time
+        && ((isStudentWorker()
+            && request.resource.data.memberId == request.auth.uid)
+          || isDirector());
+
+      allow update: if validSelfReportedSkill()
+        && request.resource.data.memberId == resource.data.memberId
+        && request.resource.data.memberName == resource.data.memberName
+        && request.resource.data.skillId == resource.data.skillId
+        && request.resource.data.createdAt == resource.data.createdAt
+        && (isDirector()
+          || (isStudentWorker()
+            && resource.data.memberId == request.auth.uid
+            && request.resource.data.diff(resource.data).affectedKeys()
+              .hasOnly(['level', 'evidence', 'updatedAt'])));
+
+      allow delete: if isDirector()
+        || (isStudentWorker() && resource.data.memberId == request.auth.uid);
     }
 
     match /{document=**} {

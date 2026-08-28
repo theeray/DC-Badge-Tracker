@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import AdminPanel from "./admin-panel";
 import AuthPanel from "./auth-panel";
+import MemberDevelopment from "./member-development";
 import SkillsDashboard from "./skills-dashboard";
 import TimeTracker from "./time-tracker";
 import {
@@ -701,6 +702,11 @@ function TrackerWorkspace({
               <span className="nav-index">◷</span><span>Time clock</span>
             </button>
           ) : null}
+          {session ? (
+            <button className={view === "member-development" ? "active" : ""} onClick={() => setActiveView("member-development")}>
+              <span className="nav-index">◎</span><span>Assignments & badges</span>
+            </button>
+          ) : null}
           {isReviewer ? (
             <button className={view === "skills-dashboard" ? "active" : ""} onClick={() => setActiveView("skills-dashboard")}>
               <span className="nav-index">▦</span><span>Team skills</span>
@@ -891,6 +897,10 @@ function TrackerWorkspace({
 
           {view === "time-clock" && session ? (
             <TimeTracker session={session} />
+          ) : null}
+
+          {view === "member-development" && session ? (
+            <MemberDevelopment session={session} onOpenSkill={setActiveView} />
           ) : null}
 
           {view === "skills-dashboard" && isReviewer && session ? (
@@ -1190,6 +1200,9 @@ function TrackerWorkspace({
           <button className={view === "brand-guides" ? "active" : ""} onClick={() => setActiveView("brand-guides")}><span>◈</span>Brand</button>
           {session ? (
             <button className={view === "time-clock" ? "active" : ""} onClick={() => setActiveView("time-clock")}><span>◷</span>Hours</button>
+          ) : null}
+          {session ? (
+            <button className={view === "member-development" ? "active" : ""} onClick={() => setActiveView("member-development")}><span>◎</span>Assigned</button>
           ) : null}
           {isReviewer ? (
             <button className={view === "skills-dashboard" ? "active" : ""} onClick={() => setActiveView("skills-dashboard")}><span>▦</span>Team</button>
