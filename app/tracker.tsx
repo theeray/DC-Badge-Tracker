@@ -320,7 +320,10 @@ function ProgressRing({
       >
         <div className="progress-ring-inner">
           <div className="progress-ring-center">
-            <span>Learning level</span>
+            <span className="progress-ring-label">
+              <span>Learning</span>
+              <span>Level</span>
+            </span>
             <strong>{level}</strong>
             <small>{centerMessage}</small>
           </div>

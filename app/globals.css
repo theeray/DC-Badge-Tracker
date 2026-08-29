@@ -651,6 +651,13 @@ input:focus-visible {
   letter-spacing: -0.05em;
 }
 
+.progress-ring-label {
+  display: grid;
+  justify-items: center;
+  line-height: 0.92;
+  text-align: center;
+}
+
 .progress-ring-center > span {
   margin-bottom: 4px;
   color: white;
@@ -5048,5 +5055,597 @@ select:focus-visible {
   .access-paused,
   .clear-progress {
     font-size: 14px;
+  }
+}
+
+/* Readable desktop scale. The original interface was optimized too densely for
+   the available space, leaving core labels and controls at only 8–13px. */
+@media (min-width: 981px) {
+  .sidebar {
+    width: 300px;
+    padding: 26px 20px 22px;
+  }
+
+  .main-panel {
+    margin-left: 300px;
+  }
+
+  .brand-lockup {
+    min-height: 78px;
+    gap: 14px;
+  }
+
+  .brand-lockup img {
+    width: 82px;
+    height: 56px;
+  }
+
+  .brand-lockup strong {
+    font-size: 20px;
+  }
+
+  .brand-lockup span {
+    font-size: 12px;
+    line-height: 1.35;
+  }
+
+  .nav-label {
+    margin-top: 22px;
+    font-size: 12px;
+  }
+
+  .sidebar nav button {
+    min-height: 50px;
+    grid-template-columns: 34px 1fr auto;
+    gap: 10px;
+    padding: 10px 13px;
+  }
+
+  .sidebar nav button > span:nth-child(2) {
+    font-size: 16px;
+  }
+
+  .nav-index {
+    width: 31px;
+    height: 31px;
+    font-size: 12px;
+  }
+
+  .sidebar nav em {
+    font-size: 12px;
+    padding: 4px 8px;
+  }
+
+  .sidebar-card {
+    padding: 16px;
+  }
+
+  .sidebar-card strong {
+    font-size: 14px;
+  }
+
+  .sidebar-card p {
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
+  .sidebar-foot {
+    font-size: 11px;
+  }
+
+  .topbar {
+    min-height: 82px;
+    padding: 0 36px;
+  }
+
+  .track-toolbar {
+    top: 82px;
+  }
+
+  .role-switch > span,
+  .mentee-picker > span,
+  .actual-role {
+    font-size: 13px;
+  }
+
+  .role-switch button,
+  .mentee-picker select {
+    min-height: 44px;
+    font-size: 15px;
+  }
+
+  .save-state {
+    gap: 8px;
+    font-size: 11px;
+  }
+
+  .save-state::before {
+    width: 9px;
+    height: 9px;
+  }
+
+  .user-chip > span {
+    width: 44px;
+    height: 44px;
+    font-size: 14px;
+  }
+
+  .user-chip strong {
+    font-size: 16px;
+  }
+
+  .user-chip small {
+    font-size: 12px;
+  }
+
+  .sign-out-button,
+  .sign-in-button,
+  .sign-in-row-button,
+  .director-review-label {
+    min-height: 44px;
+    font-size: 14px;
+  }
+
+  .content-wrap {
+    width: min(1480px, 100%);
+    padding: 40px 36px 96px;
+  }
+
+  .eyebrow {
+    font-size: 13px;
+  }
+
+  .hero-card {
+    min-height: 350px;
+    grid-template-columns: minmax(0, 1fr) 240px;
+    padding: 48px 52px;
+  }
+
+  .hero-card h1 {
+    font-size: clamp(44px, 4.4vw, 66px);
+  }
+
+  .hero-card p,
+  .brand-guide-hero p,
+  .track-heading p,
+  .tool-hero p {
+    font-size: 18px;
+    line-height: 1.6;
+  }
+
+  .primary-button,
+  .secondary-button,
+  .brand-library-link {
+    min-height: 50px;
+    font-size: 15px;
+    padding-inline: 22px;
+  }
+
+  .progress-module {
+    width: 240px;
+    gap: 16px;
+  }
+
+  .progress-ring {
+    width: 190px;
+    height: 190px;
+  }
+
+  .progress-ring-inner {
+    width: 154px;
+    height: 154px;
+  }
+
+  .progress-ring-inner::before {
+    width: 120px;
+    height: 120px;
+  }
+
+  .progress-ring-center strong {
+    font-size: 38px;
+  }
+
+  .progress-ring-center > span {
+    margin-bottom: 5px;
+    font-size: 11px;
+    letter-spacing: 0.12em;
+  }
+
+  .progress-ring-center small {
+    max-width: 92px;
+    font-size: 10px;
+    line-height: 1.25;
+  }
+
+  .progress-ring-key {
+    gap: 7px;
+    font-size: 13px;
+  }
+
+  .progress-ring-key i {
+    width: 12px;
+    height: 12px;
+  }
+
+  .progress-ring-key b {
+    font-size: 11px;
+  }
+
+  .stat-grid {
+    gap: 18px;
+    margin-top: 20px;
+  }
+
+  .stat-grid article {
+    min-height: 112px;
+    grid-template-columns: 50px minmax(0, 1fr) auto;
+    gap: 15px;
+    padding: 20px;
+  }
+
+  .stat-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 13px;
+    font-size: 21px;
+  }
+
+  .stat-grid article strong {
+    font-size: 28px;
+  }
+
+  .stat-grid article div span {
+    font-size: 15px;
+  }
+
+  .stat-grid article small {
+    max-width: 150px;
+    font-size: 11px;
+    line-height: 1.35;
+    text-align: right;
+  }
+
+  .dashboard-section {
+    margin-top: 46px;
+  }
+
+  .section-title {
+    margin-bottom: 18px;
+  }
+
+  .section-title h2,
+  .dashboard-section h2,
+  .brand-foundations-heading h2,
+  .asset-library .section-title h2,
+  .athletics-reserved-heading h2 {
+    font-size: 29px;
+    line-height: 1.15;
+  }
+
+  .section-title > button {
+    min-height: 42px;
+    font-size: 14px;
+  }
+
+  .path-card {
+    min-height: 250px;
+    padding: 26px;
+  }
+
+  .path-number {
+    width: 42px;
+    height: 42px;
+    font-size: 13px;
+  }
+
+  .path-card > strong,
+  .review-copy strong {
+    font-size: 19px;
+    line-height: 1.25;
+  }
+
+  .path-card p,
+  .review-copy span,
+  .mini-project p,
+  .empty-state p,
+  .project-card-body > p,
+  .brand-foundations-heading p,
+  .asset-library .section-title p,
+  .athletics-reserved-heading p {
+    font-size: 15px;
+    line-height: 1.55;
+  }
+
+  .path-card small,
+  .mini-project > span,
+  .mini-project em,
+  .ready-pill {
+    font-size: 12px;
+  }
+
+  .mini-project strong {
+    font-size: 21px;
+  }
+
+  .review-list article {
+    min-height: 86px;
+    grid-template-columns: 46px minmax(220px, 1fr) auto auto;
+    padding: 14px 18px;
+  }
+
+  .student-avatar {
+    width: 44px;
+    height: 44px;
+    font-size: 13px;
+  }
+
+  .endorse-button,
+  .endorsed,
+  .awaiting-button {
+    min-height: 44px;
+    font-size: 13px;
+  }
+
+  .empty-state {
+    min-height: 240px;
+  }
+
+  .empty-state strong {
+    font-size: 20px;
+  }
+
+  .track-heading h1 {
+    font-size: clamp(43px, 4.5vw, 60px);
+  }
+
+  .track-count span,
+  .project-count span {
+    font-size: 12px;
+  }
+
+  .group-tabs button,
+  .search-field input {
+    font-size: 13px;
+  }
+
+  .group-tabs button {
+    min-height: 40px;
+    padding-inline: 15px;
+  }
+
+  .search-field {
+    min-height: 44px;
+  }
+
+  .skill-row {
+    min-height: 110px;
+    grid-template-columns: 46px minmax(240px, 1fr) minmax(165px, 0.45fr) 158px;
+    padding: 15px 18px;
+  }
+
+  .status-marker {
+    width: 42px;
+    height: 42px;
+    font-size: 17px;
+  }
+
+  .skill-meta > span,
+  .tier {
+    font-size: 11px;
+  }
+
+  .skill-copy h3 {
+    font-size: 17px;
+  }
+
+  .resource-link,
+  .resource-note,
+  .no-endorsements,
+  .endorsement-stack b {
+    font-size: 13px;
+  }
+
+  .endorsement-stack > span {
+    width: 31px;
+    height: 31px;
+    font-size: 10px;
+  }
+
+  .status-button {
+    width: 154px;
+    min-height: 44px;
+    font-size: 13px;
+  }
+
+  .project-card-body h2 {
+    font-size: 25px;
+  }
+
+  .project-card-facts span,
+  .project-card-body > button,
+  .brand-library-link,
+  .guide-selector button small,
+  .guide-selector button > b {
+    font-size: 13px;
+  }
+
+  .guide-selector button > span,
+  .guide-selector button strong {
+    font-size: 16px;
+  }
+
+  .foundation-grid h3,
+  .asset-download-grid h3 {
+    font-size: 23px;
+  }
+
+  .foundation-grid p,
+  .foundation-grid li,
+  .asset-download-grid p,
+  .athletics-identity-summary p,
+  .athletics-hold-note p,
+  .section-copy,
+  .brief-list li,
+  .workflow-list p,
+  .constraint-list li {
+    font-size: 15px;
+    line-height: 1.55;
+  }
+
+  .asset-kind span,
+  .asset-download-grid a,
+  .athletics-preview-grid figcaption {
+    font-size: 14px;
+  }
+
+  .tool-hero {
+    padding: 48px 52px;
+  }
+
+  .clock-card > span,
+  .time-summary-grid span,
+  .skills-summary-grid span,
+  .director-clock-worker > span,
+  .time-toolbar label > span,
+  .skills-filter-bar label > span,
+  .time-editor label > span,
+  .credential-editor label > span,
+  .development-filter-bar label > span,
+  .self-report-editor label > span,
+  .assignment-status-control > span {
+    font-size: 12px;
+  }
+
+  .clock-card small,
+  .time-summary-grid small,
+  .skills-summary-grid small,
+  .time-table td,
+  .credentials-table td,
+  .admin-roster td strong,
+  .admin-roster td span,
+  .assignment-card header p,
+  .assignment-person,
+  .assignment-meta,
+  .self-report-editor > p,
+  .self-report-card header div > span,
+  .self-report-card > p {
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
+  .time-table th,
+  .credentials-table th,
+  .admin-roster th {
+    font-size: 12px;
+  }
+
+  .time-table td button,
+  .credential-actions button,
+  .assignment-card footer > a,
+  .assignment-card footer > button,
+  .assignment-actions button,
+  .self-report-card footer button {
+    min-height: 44px;
+    font-size: 13px;
+  }
+
+  .verification-pill,
+  .verification-pill strong,
+  .credential-level,
+  .credential-level strong,
+  .assignment-status,
+  .source-pill,
+  .live-pill,
+  .account-live,
+  .account-pending,
+  .access-active,
+  .access-paused,
+  .clear-progress {
+    font-size: 12px;
+  }
+
+  .assignment-card h3 {
+    font-size: 25px;
+  }
+
+  .self-report-card header div > strong {
+    font-size: 19px;
+  }
+
+  .auth-card label > span,
+  .admin-invite-card label > span,
+  .auth-submit,
+  .admin-invite-card form > button,
+  .auth-message,
+  .admin-message,
+  .auth-card-actions button,
+  .auth-card-actions span {
+    font-size: 15px;
+  }
+
+  .auth-card input,
+  .admin-invite-card input,
+  .admin-invite-card select,
+  .admin-roster select {
+    min-height: 50px;
+    font-size: 15px;
+  }
+}
+
+@media (min-width: 1300px) {
+  .sidebar {
+    width: 320px;
+  }
+
+  .main-panel {
+    margin-left: 320px;
+  }
+
+  .topbar {
+    padding-inline: 48px;
+  }
+
+  .content-wrap {
+    padding-inline: 48px;
+  }
+
+  .hero-card {
+    grid-template-columns: minmax(0, 1fr) 280px;
+    padding: 54px 64px;
+  }
+
+  .progress-module {
+    width: 280px;
+  }
+
+  .progress-ring {
+    width: 210px;
+    height: 210px;
+  }
+
+  .progress-ring-inner {
+    width: 170px;
+    height: 170px;
+  }
+
+  .progress-ring-inner::before {
+    width: 132px;
+    height: 132px;
+  }
+
+  .progress-ring-center > span {
+    font-size: 12px;
+  }
+
+  .progress-ring-center small {
+    font-size: 11px;
+  }
+
+  .progress-ring-key {
+    font-size: 14px;
+  }
+
+  .progress-ring-key b {
+    font-size: 12px;
   }
 }
