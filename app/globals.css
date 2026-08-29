@@ -5744,3 +5744,78 @@ select:focus-visible {
     font-size: 12px;
   }
 }
+
+/* Compact phone progress layout keeps the complete graphic above the fixed
+   navigation instead of letting the full desktop ring continue behind it. */
+@media (max-width: 760px) {
+  .content-wrap {
+    padding-bottom: calc(150px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .hero-card {
+    min-height: 0;
+    padding-bottom: 28px;
+  }
+
+  .progress-module {
+    width: 100%;
+    grid-template-columns: 104px minmax(0, 1fr);
+    align-items: center;
+    justify-items: start;
+    gap: 16px;
+    margin-top: 12px;
+  }
+
+  .progress-ring {
+    width: 104px;
+    height: 104px;
+  }
+
+  .progress-ring-inner {
+    width: 84px;
+    height: 84px;
+  }
+
+  .progress-ring-inner::before {
+    width: 68px;
+    height: 68px;
+  }
+
+  .progress-ring-center > span {
+    margin-bottom: 2px;
+    font-size: 9px;
+    line-height: 0.9;
+    letter-spacing: 0.08em;
+  }
+
+  .progress-ring-center strong {
+    font-size: 27px;
+  }
+
+  .progress-ring-center small {
+    display: none;
+  }
+
+  .progress-ring-key {
+    width: 100%;
+    gap: 6px;
+    font-size: 14px;
+  }
+
+  .progress-ring-key i {
+    width: 11px;
+    height: 11px;
+  }
+
+  .progress-ring-key b {
+    font-size: 13px;
+    line-height: 1.35;
+  }
+
+  .mobile-nav {
+    bottom: max(10px, env(safe-area-inset-bottom, 0px));
+    background: white;
+    box-shadow: 0 14px 38px rgb(5 36 32 / 24%);
+    padding-bottom: 7px;
+  }
+}
