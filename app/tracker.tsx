@@ -56,6 +56,20 @@ const iconForArea: Record<string, string> = {
   leadership: "04",
 };
 
+const searchStopWords = new Set(["a", "an", "and", "for", "of", "or", "the", "to"]);
+
+const normalizeSearchToken = (token: string) =>
+  token.endsWith("ing") && token.length > 5 ? token.slice(0, -3) : token;
+
+const getSearchTokens = (value: string) =>
+  value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim()
+    .split(/\s+/)
+    .filter((token) => token && !searchStopWords.has(token))
+    .map(normalizeSearchToken);
+
 const brandGuides = [
   { id: "digital-corps", name: "Digital Corps", label: "Available", enabled: true },
   { id: "bsu-academics", name: "BSU Academics", label: "Available", enabled: true },
@@ -642,10 +656,16 @@ function TrackerWorkspace({
 
   const visibleSkills = useMemo(() => {
     if (!activeArea) return [];
-    const normalized = query.trim().toLowerCase();
-    return activeArea.skills.filter((item) => {
-      const matchesGroup = selectedGroup === "All skills" || item.group === selectedGroup;
-      const matchesQuery = !normalized || `${item.title} ${item.group}`.toLowerCase().includes(normalized);
+    const tokens = getSearchTokens(query);
+    const searchingAllPaths = tokens.length > 0;
+    const sourceSkills = searchingAllPaths ? allSkills : activeArea.skills;
+    return sourceSkills.filter((item) => {
+      const matchesGroup = searchingAllPaths || selectedGroup === "All skills" || item.group === selectedGroup;
+      const area = learningAreas.find((candidate) => candidate.id === item.area);
+      const searchableText = getSearchTokens(
+        `${item.title} ${item.group} ${item.searchTerms?.join(" ") ?? ""} ${area?.name ?? ""} ${area?.shortName ?? ""}`,
+      ).join(" ");
+      const matchesQuery = !searchingAllPaths || tokens.every((token) => searchableText.includes(token));
       return matchesGroup && matchesQuery;
     });
   }, [activeArea, query, selectedGroup]);
@@ -998,6 +1018,21 @@ function TrackerWorkspace({
 
           {activeArea ? (
             <>
+              <nav className="mobile-path-switcher" aria-label="Choose a learning path">
+                {learningAreas.map((area) => (
+                  <button
+                    type="button"
+                    key={area.id}
+                    className={area.id === activeArea.id ? "active" : ""}
+                    onClick={() => setActiveView(area.id)}
+                  >
+                    <span>{iconForArea[area.id]}</span>
+                    <strong>{area.shortName}</strong>
+                    <small>{area.skills.length}</small>
+                  </button>
+                ))}
+              </nav>
+
               <section className="track-heading">
                 <div><span className="eyebrow">{activeArea.eyebrow}</span><h1>{activeArea.name}</h1><p>{activeArea.description}</p></div>
                 <div className="track-count"><strong>{activeArea.skills.filter((item) => statuses[item.id] === "complete").length}</strong><span>of {activeArea.skills.length}<br />complete</span></div>
@@ -1007,8 +1042,12 @@ function TrackerWorkspace({
                 <div className="group-tabs" role="tablist" aria-label="Skill groups">
                   {activeGroups.map((group) => <button key={group} role="tab" aria-selected={selectedGroup === group} className={selectedGroup === group ? "active" : ""} onClick={() => setSelectedGroup(group)}>{group}</button>)}
                 </div>
-                <label className="search-field"><span>⌕</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search skills" aria-label="Search skills" /></label>
+                <label className="search-field"><span>⌕</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search all tutorials" aria-label="Search all tutorials" /></label>
               </div>
+
+              {query.trim() ? (
+                <p className="global-search-note">Searching all four learning paths</p>
+              ) : null}
 
               <section className="skills-list">
                 {visibleSkills.map((item) => {
@@ -1019,7 +1058,7 @@ function TrackerWorkspace({
                     <article className={`skill-row status-${itemStatus}`} key={item.id}>
                       <div className="status-marker"><span>{itemStatus === "complete" ? "✓" : itemStatus === "ready" ? "◎" : itemStatus === "learning" ? "◐" : ""}</span></div>
                       <div className="skill-copy">
-                        <div className="skill-meta"><span>{item.group}</span>{item.tier ? <em className={`tier tier-${item.tier.toLowerCase()}`}>{item.tier}</em> : null}</div>
+                        <div className="skill-meta"><span>{query.trim() && item.area !== activeArea.id ? `${learningAreas.find((area) => area.id === item.area)?.shortName ?? item.area} · ${item.group}` : item.group}</span>{item.tier ? <em className={`tier tier-${item.tier.toLowerCase()}`}>{item.tier}</em> : null}</div>
                         <h3>{item.title}</h3>
                         <SkillResource item={item} />
                       </div>
@@ -1284,7 +1323,7 @@ function TrackerWorkspace({
 
         <div className="mobile-nav" aria-label="Mobile navigation">
           <button className={view === "overview" ? "active" : ""} onClick={() => setActiveView("overview")}><span>⌂</span>Home</button>
-          <button className={learningAreas.some((area) => area.id === view) ? "active" : ""} onClick={() => setActiveView("content-creation")}><span>◫</span>Skills</button>
+          <button className={learningAreas.some((area) => area.id === view) ? "active" : ""} onClick={() => setActiveView("onboarding")}><span>◫</span>Learn</button>
           <button className={view === "projects" ? "active" : ""} onClick={() => setActiveView("projects")}><span>◆</span>Projects</button>
           <button className={view === "brand-guides" ? "active" : ""} onClick={() => setActiveView("brand-guides")}><span>◈</span>Brand</button>
           {session ? (
