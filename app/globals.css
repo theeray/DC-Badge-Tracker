@@ -519,7 +519,7 @@ input:focus-visible {
 }
 
 .hero-copy,
-.progress-ring {
+.progress-module {
   position: relative;
   z-index: 2;
 }
@@ -592,26 +592,51 @@ input:focus-visible {
   color: white;
 }
 
-.progress-ring {
+.progress-module {
   display: grid;
-  width: 154px;
-  height: 154px;
-  place-items: center;
+  width: 218px;
+  justify-items: center;
   justify-self: end;
-  border-radius: 50%;
-  background: conic-gradient(var(--orange) var(--progress), rgb(255 255 255 / 13%) 0);
+  gap: 13px;
 }
 
-.progress-ring::before {
+.progress-ring {
+  position: relative;
+  display: grid;
+  width: 174px;
+  height: 174px;
+  place-items: center;
+  border-radius: 50%;
+  background: conic-gradient(
+    var(--silver) var(--tutorial-progress),
+    rgb(255 255 255 / 13%) 0
+  );
+  box-shadow: 0 0 0 1px rgb(255 255 255 / 12%);
+}
+
+.progress-ring-inner {
+  position: absolute;
+  display: grid;
+  width: 140px;
+  height: 140px;
+  place-items: center;
+  border-radius: 50%;
+  background: conic-gradient(
+    var(--orange) var(--verification-progress),
+    rgb(255 255 255 / 13%) 0
+  );
+}
+
+.progress-ring-inner::before {
   content: "";
   position: absolute;
-  width: 122px;
-  height: 122px;
+  width: 108px;
+  height: 108px;
   border-radius: 50%;
   background: var(--green);
 }
 
-.progress-ring div {
+.progress-ring-center {
   position: relative;
   z-index: 1;
   display: flex;
@@ -619,16 +644,69 @@ input:focus-visible {
   align-items: center;
 }
 
-.progress-ring strong {
+.progress-ring-center strong {
   font-family: "Arial Black", Arial, sans-serif;
   font-size: 32px;
+  line-height: 1;
   letter-spacing: -0.05em;
 }
 
-.progress-ring span {
+.progress-ring-center > span {
+  margin-bottom: 4px;
+  color: white;
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.progress-ring-center small {
+  max-width: 82px;
+  margin-top: 5px;
   color: var(--mint);
   font-family: Georgia, serif;
-  font-size: 11px;
+  font-size: 8px;
+  line-height: 1.25;
+  text-align: center;
+}
+
+.progress-ring-key {
+  display: grid;
+  gap: 5px;
+  color: rgb(255 255 255 / 76%);
+  font-family: Georgia, serif;
+  font-size: 9px;
+  line-height: 1.35;
+  text-align: left;
+}
+
+.progress-ring-key span {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.progress-ring-key i {
+  width: 9px;
+  height: 9px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+}
+
+.progress-ring-key .key-tutorials {
+  background: var(--silver);
+}
+
+.progress-ring-key .key-verifications {
+  background: var(--orange);
+}
+
+.progress-ring-key b {
+  margin-top: 2px;
+  color: white;
+  font-family: Arial, sans-serif;
+  font-size: 8px;
+  line-height: 1.3;
 }
 
 .hero-pattern {
@@ -2588,20 +2666,30 @@ input:focus-visible {
     font-size: 13px;
   }
 
-  .progress-ring {
-    width: 112px;
-    height: 112px;
+  .progress-module {
+    width: 100%;
+    justify-items: start;
     justify-self: start;
     margin-top: 28px;
   }
 
-  .progress-ring::before {
-    width: 88px;
-    height: 88px;
+  .progress-ring {
+    width: 174px;
+    height: 174px;
   }
 
-  .progress-ring strong {
-    font-size: 23px;
+  .progress-ring-inner {
+    width: 140px;
+    height: 140px;
+  }
+
+  .progress-ring-inner::before {
+    width: 108px;
+    height: 108px;
+  }
+
+  .progress-ring-center strong {
+    font-size: 32px;
   }
 
   .stat-grid {
@@ -3019,7 +3107,10 @@ input:focus-visible {
   .secondary-button,
   .brand-library-link { min-height: 50px; font-size: 16px; }
 
-  .progress-ring span { font-size: 15px; }
+  .progress-ring-center > span { font-size: 12px; }
+  .progress-ring-center small { font-size: 11px; }
+  .progress-ring-key { gap: 7px; font-size: 13px; }
+  .progress-ring-key b { font-size: 12px; }
   .stat-grid { gap: 16px; }
   .stat-grid article {
     min-height: 116px;

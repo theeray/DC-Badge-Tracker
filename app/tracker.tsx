@@ -24,10 +24,12 @@ import {
   signOutCurrentUser,
   watchAuthSession,
   watchEndorsements,
+  watchMemberSkillCredentials,
   watchMentees,
   watchProgress,
   type AuthSession,
   type Endorsement,
+  type SkillCredential,
   type UserProfile,
 } from "./firebase";
 
@@ -255,12 +257,79 @@ function SkillResource({ item }: { item: Skill }) {
   return <span className="resource-note">Practice activity</span>;
 }
 
-function ProgressRing({ percent }: { percent: number }) {
+function ProgressRing({
+  completed,
+  total,
+  verifiedSkills,
+}: {
+  completed: number;
+  total: number;
+  verifiedSkills: number;
+}) {
+  const tutorialsPerLevel = 25;
+  const verificationsPerLevel = 5;
+  const levelCount = Math.max(1, Math.ceil(total / tutorialsPerLevel));
+  const tutorialLevelsComplete = completed >= total
+    ? levelCount
+    : Math.floor(completed / tutorialsPerLevel);
+  const verificationLevelsComplete = Math.floor(
+    verifiedSkills / verificationsPerLevel,
+  );
+  const levelsAchieved = Math.min(
+    levelCount,
+    tutorialLevelsComplete,
+    verificationLevelsComplete,
+  );
+  const journeyComplete = levelsAchieved >= levelCount;
+  const level = journeyComplete ? levelCount : levelsAchieved + 1;
+  const tutorialStart = (level - 1) * tutorialsPerLevel;
+  const tutorialGoal = Math.min(tutorialsPerLevel, total - tutorialStart);
+  const tutorialsThisLevel = journeyComplete
+    ? tutorialGoal
+    : Math.min(tutorialGoal, Math.max(0, completed - tutorialStart));
+  const verificationStart = (level - 1) * verificationsPerLevel;
+  const verificationsThisLevel = journeyComplete
+    ? verificationsPerLevel
+    : Math.min(
+        verificationsPerLevel,
+        Math.max(0, verifiedSkills - verificationStart),
+      );
+  const tutorialPercent = tutorialGoal
+    ? (tutorialsThisLevel / tutorialGoal) * 100
+    : 0;
+  const verificationPercent =
+    (verificationsThisLevel / verificationsPerLevel) * 100;
+  const centerMessage = journeyComplete
+    ? "all levels achieved"
+    : levelsAchieved
+      ? `${levelsAchieved} level${levelsAchieved === 1 ? "" : "s"} achieved`
+      : "complete both rings";
+
   return (
-    <div className="progress-ring" style={{ "--progress": `${percent * 3.6}deg` } as React.CSSProperties}>
-      <div>
-        <strong>{percent}%</strong>
-        <span>complete</span>
+    <div
+      className="progress-module"
+      role="img"
+      aria-label={`Learning level ${level}. Silver ring: ${tutorialsThisLevel} of ${tutorialGoal} tutorials. Orange ring: ${verificationsThisLevel} of ${verificationsPerLevel} uniquely endorsed or faculty-verified skills.`}
+    >
+      <div
+        className="progress-ring"
+        style={{
+          "--tutorial-progress": `${tutorialPercent * 3.6}deg`,
+          "--verification-progress": `${verificationPercent * 3.6}deg`,
+        } as React.CSSProperties}
+      >
+        <div className="progress-ring-inner">
+          <div className="progress-ring-center">
+            <span>Learning level</span>
+            <strong>{level}</strong>
+            <small>{centerMessage}</small>
+          </div>
+        </div>
+      </div>
+      <div className="progress-ring-key" aria-hidden="true">
+        <span><i className="key-tutorials" />Tutorials · {tutorialsThisLevel}/{tutorialGoal}</span>
+        <span><i className="key-verifications" />Verified skills · {verificationsThisLevel}/{verificationsPerLevel}</span>
+        <b>{journeyComplete ? "All tutorial levels complete" : `Complete both rings to achieve Level ${level}`}</b>
       </div>
     </div>
   );
@@ -427,6 +496,7 @@ function TrackerWorkspace({
   const [endorsements, setEndorsements] = useState<Record<string, number>>(defaultEndorsements);
   const [sessionEndorsed, setSessionEndorsed] = useState<string[]>([]);
   const [endorsementRecords, setEndorsementRecords] = useState<Endorsement[]>([]);
+  const [credentialRecords, setCredentialRecords] = useState<SkillCredential[]>([]);
   const [mentees, setMentees] = useState<UserProfile[]>([]);
   const [selectedMenteeId, setSelectedMenteeId] = useState("");
   const [selectedGroup, setSelectedGroup] = useState("All skills");
@@ -474,6 +544,7 @@ function TrackerWorkspace({
         setEndorsements(defaultEndorsements);
         setSessionEndorsed([]);
         setEndorsementRecords([]);
+        setCredentialRecords([]);
         setSyncState(role === "guest" ? "guest" : "saved");
       }, 0);
       return () => window.clearTimeout(timer);
@@ -510,17 +581,28 @@ function TrackerWorkspace({
         setSyncState("error");
       },
     );
+    const stopCredentials = watchMemberSkillCredentials(
+      targetMenteeId,
+      setCredentialRecords,
+      (message) => {
+        setAnnouncement(message);
+        setSyncState("error");
+      },
+    );
 
     return () => {
       stopProgress();
       stopEndorsements();
+      stopCredentials();
     };
   }, [role, session?.profile.uid, targetMenteeId]);
 
   const completeCount = allSkills.filter((item) => statuses[item.id] === "complete").length;
   const readyCount = allSkills.filter((item) => statuses[item.id] === "ready").length;
-  const endorsementCount = Object.values(endorsements).reduce((sum, value) => sum + value, 0);
-  const percent = Math.round((completeCount / allSkills.length) * 100);
+  const verifiedSkillCount = new Set([
+    ...endorsementRecords.map((record) => record.skillId),
+    ...credentialRecords.map((record) => record.skillId),
+  ]).size;
   const activeArea = learningAreas.find((area) => area.id === view);
   const activeGroups = activeArea ? ["All skills", ...new Set(activeArea.skills.map((item) => item.group))] : [];
   const brandHero = selectedBrandGuide === "digital-corps"
@@ -800,7 +882,7 @@ function TrackerWorkspace({
                   </h1>
                   <p>
                     {role === "mentee"
-                      ? "Work through tutorials, apply the skills in real projects, and request mentor review when you are ready."
+                      ? "Complete tutorials to fill the silver ring, then request reviews so endorsed skills fill the orange ring and unlock each learning level."
                       : isReviewer
                         ? selectedMentee
                           ? `Review ${selectedMentee.displayName}'s progress and endorse skills you have personally seen demonstrated.`
@@ -818,14 +900,18 @@ function TrackerWorkspace({
                     <button className="secondary-button" onClick={() => setActiveView("projects")}>Browse projects</button>
                   </div>
                 </div>
-                <ProgressRing percent={percent} />
+                <ProgressRing
+                  completed={completeCount}
+                  total={allSkills.length}
+                  verifiedSkills={verifiedSkillCount}
+                />
                 <div className="hero-pattern" aria-hidden="true" />
               </section>
 
               <section className="stat-grid" aria-label="Progress summary">
-                <article><span className="stat-icon green">✓</span><div><strong>{completeCount}</strong><span>Skills completed</span></div><small>of {allSkills.length}</small></article>
+                <article><span className="stat-icon green">✓</span><div><strong>{completeCount}</strong><span>Tutorials completed</span></div><small>of {allSkills.length}</small></article>
                 <article><span className="stat-icon orange">◎</span><div><strong>{readyCount}</strong><span>Ready for review</span></div><small>mentor queue</small></article>
-                <article><span className="stat-icon mint">✦</span><div><strong>{endorsementCount}</strong><span>Skill endorsements</span></div><small>from mentors</small></article>
+                <article><span className="stat-icon mint">✦</span><div><strong>{verifiedSkillCount}</strong><span>Verified skills</span></div><small>endorsed or faculty confirmed</small></article>
               </section>
 
               {isReviewer ? (
