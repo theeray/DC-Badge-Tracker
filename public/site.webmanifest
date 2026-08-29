@@ -1,0 +1,18 @@
+{
+  "name": "Digital Corps Badge Tracker",
+  "short_name": "DC Badges",
+  "description": "Track Digital Corps tutorials, progress, assignments, hours, and skill endorsements.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#054f45",
+  "icons": [
+    {
+      "src": "/brand/digital-corps-favicon.png?v=2",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}
