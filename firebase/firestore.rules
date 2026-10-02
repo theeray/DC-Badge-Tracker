@@ -20,6 +20,10 @@ service cloud.firestore {
       return /databases/$(database)/documents/approvedUsers/$(email);
     }
 
+    function selfReportPath(memberId, skillId) {
+      return /databases/$(database)/documents/selfReportedSkills/$(memberId + '_' + skillId);
+    }
+
     function hasProfile() {
       return signedIn() && exists(userPath(request.auth.uid));
     }
@@ -152,6 +156,27 @@ service cloud.firestore {
         ]);
     }
 
+    function validDemonstrationRequest() {
+      return request.resource.data.memberId is string
+        && request.resource.data.memberName is string
+        && request.resource.data.skillId is string
+        && request.resource.data.mentorId == request.auth.uid
+        && request.resource.data.mentorName is string
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.memberId != request.auth.uid
+        && exists(userPath(request.resource.data.memberId))
+        && get(userPath(request.resource.data.memberId)).data.active == true
+        && get(userPath(request.resource.data.memberId)).data.role in ['mentee', 'mentor']
+        && request.resource.data.keys().hasOnly([
+          'memberId',
+          'memberName',
+          'skillId',
+          'mentorId',
+          'mentorName',
+          'createdAt'
+        ]);
+    }
+
     function validMemberProfile(memberId) {
       return request.resource.data.memberId == memberId
         && exists(userPath(memberId))
@@ -237,7 +262,11 @@ service cloud.firestore {
           && request.auth.uid == uid
           && approvedForSelf())
         || (activeUser() && (isMentor() || isDirector()));
-      allow list: if isMentor() || isDirector();
+      allow list: if isMentor()
+        || isDirector()
+        || (isMentee()
+          && resource.data.role == 'mentor'
+          && resource.data.active == true);
 
       allow create: if signedIn()
         && request.auth.uid == uid
@@ -291,7 +320,7 @@ service cloud.firestore {
         && (request.auth.uid == menteeId || isMentor() || isDirector());
 
       allow create, update: if isDirector()
-        || (isMentee()
+        || (isStudentWorker()
           && request.auth.uid == menteeId
           && request.resource.data.ownerId == menteeId
           && request.resource.data.statuses is map
@@ -303,7 +332,7 @@ service cloud.firestore {
           ]));
 
       allow delete: if isDirector()
-        || (isMentee() && request.auth.uid == menteeId);
+        || (isStudentWorker() && request.auth.uid == menteeId);
     }
 
     match /progressBackups/{menteeId} {
@@ -312,7 +341,13 @@ service cloud.firestore {
 
     match /endorsements/{endorsementId} {
       allow read: if activeUser()
-        && (request.auth.uid == resource.data.menteeId || isMentor() || isDirector());
+        && (request.auth.uid == resource.data.menteeId
+          || isMentor()
+          || isDirector()
+          || (isMentee()
+            && exists(userPath(resource.data.menteeId))
+            && get(userPath(resource.data.menteeId)).data.active == true
+            && get(userPath(resource.data.menteeId)).data.role == 'mentor'));
 
       allow create: if isMentor()
         && request.resource.data.mentorId == request.auth.uid
@@ -327,12 +362,17 @@ service cloud.firestore {
           'mentorName',
           'createdAt'
         ])
+        && request.resource.data.menteeId != request.auth.uid
         && exists(userPath(request.resource.data.menteeId))
         && get(userPath(request.resource.data.menteeId)).data.active == true
-        && get(userPath(request.resource.data.menteeId)).data.role == 'mentee'
-        && exists(/databases/$(database)/documents/progress/$(request.resource.data.menteeId))
-        && get(/databases/$(database)/documents/progress/$(request.resource.data.menteeId))
-          .data.statuses[request.resource.data.skillId] in ['ready', 'complete'];
+        && get(userPath(request.resource.data.menteeId)).data.role in ['mentee', 'mentor']
+        && ((exists(/databases/$(database)/documents/progress/$(request.resource.data.menteeId))
+            && get(/databases/$(database)/documents/progress/$(request.resource.data.menteeId))
+              .data.statuses[request.resource.data.skillId] in ['ready', 'complete'])
+          || exists(selfReportPath(
+            request.resource.data.menteeId,
+            request.resource.data.skillId
+          )));
 
       allow update: if false;
       allow delete: if isDirector()
@@ -366,7 +406,11 @@ service cloud.firestore {
       allow read: if activeUser()
         && (isMentor()
           || isDirector()
-          || resource.data.workerId == request.auth.uid);
+          || resource.data.workerId == request.auth.uid
+          || (isMentee()
+            && exists(userPath(resource.data.workerId))
+            && get(userPath(resource.data.workerId)).data.active == true
+            && get(userPath(resource.data.workerId)).data.role == 'mentor'));
       allow create, update: if isDirector() && validSkillCredential();
       allow delete: if isDirector();
     }
@@ -417,7 +461,11 @@ service cloud.firestore {
       allow read: if activeUser()
         && (isMentor()
           || isDirector()
-          || resource.data.memberId == request.auth.uid);
+          || resource.data.memberId == request.auth.uid
+          || (isMentee()
+            && exists(userPath(resource.data.memberId))
+            && get(userPath(resource.data.memberId)).data.active == true
+            && get(userPath(resource.data.memberId)).data.role == 'mentor'));
 
       allow create: if validSelfReportedSkill()
         && request.resource.data.createdAt == request.time
@@ -438,6 +486,18 @@ service cloud.firestore {
 
       allow delete: if isDirector()
         || (isStudentWorker() && resource.data.memberId == request.auth.uid);
+    }
+
+    match /demonstrationRequests/{requestId} {
+      allow read: if activeUser()
+        && (isDirector()
+          || resource.data.memberId == request.auth.uid
+          || (isMentor() && resource.data.mentorId == request.auth.uid));
+
+      allow create: if isMentor() && validDemonstrationRequest();
+      allow update: if false;
+      allow delete: if isDirector()
+        || (isMentor() && resource.data.mentorId == request.auth.uid);
     }
 
     match /{document=**} {

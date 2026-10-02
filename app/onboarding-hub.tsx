@@ -66,7 +66,7 @@ const agenda = [
   {
     time: "53–58",
     title: "Follow a real job",
-    detail: "Review the project flowchart, job request form, file organization guide, and client meeting checklist.",
+    detail: "Review the job request form, file organization guide, and client meeting checklist.",
   },
   {
     time: "58–60",
@@ -97,19 +97,9 @@ const resources = [
     href: "https://teams.microsoft.com/",
   },
   {
-    label: "Project flowchart",
-    detail: "How a Digital Corps job moves from request to delivery",
-    href: "/resources/onboarding/digital-corps-flow-chart.pdf",
-  },
-  {
     label: "File organization guide",
     detail: "Shared project-folder and file-naming practices",
     href: "/resources/onboarding/file-organization-guide.pdf",
-  },
-  {
-    label: "Setting up a project",
-    detail: "Start a job with the expected folder and production structure",
-    href: "/resources/onboarding/setting-up-a-project-guide.pdf",
   },
   {
     label: "Client meeting checklist",

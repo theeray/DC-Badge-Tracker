@@ -30,6 +30,14 @@ function formatDuration(milliseconds: number) {
   return `${hours}:${String(minutes).padStart(2, "0")}`;
 }
 
+function formatLiveDuration(milliseconds: number) {
+  const safe = Math.max(0, milliseconds);
+  const hours = Math.floor(safe / 3_600_000);
+  const minutes = Math.floor((safe % 3_600_000) / 60_000);
+  const seconds = Math.floor((safe % 60_000) / 1_000);
+  return `${hours}:${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+}
+
 function formatDateTime(date: Date) {
   return new Intl.DateTimeFormat(undefined, {
     weekday: "short",
@@ -378,7 +386,7 @@ export default function TimeTracker({ session }: { session: AuthSession }) {
             <span>{activeEntry ? "Currently on the clock" : "Currently off the clock"}</span>
             <strong>
               {activeEntry
-                ? formatDuration(durationFor(activeEntry, now))
+                ? formatLiveDuration(durationFor(activeEntry, now))
                 : formatDuration(clockWorkerTodayMilliseconds)}
             </strong>
             <small>

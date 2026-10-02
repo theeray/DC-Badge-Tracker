@@ -4,16 +4,27 @@ import { useEffect, useMemo, useState } from "react";
 import { allSkills, learningAreas, type Skill } from "./data";
 import MemberDirectory from "./member-directory";
 import {
+  addEndorsement,
   readableFirebaseError,
+  removeDemonstrationRequest,
+  removeEndorsement,
   removeSkillCredential,
+  requestSkillDemonstration,
+  restoreDemonstrationRequest,
   saveSkillCredential,
   watchAllEndorsements,
   watchAllProgress,
   watchAllUsers,
+  watchEndorsements,
+  watchMemberSelfReportedSkills,
+  watchMemberSkillCredentials,
+  watchMentorDemonstrationRequests,
+  watchMentors,
   watchSelfReportedSkills,
   watchSkillCredentials,
   type AuthSession,
   type CredentialLevel,
+  type DemonstrationRequest,
   type Endorsement,
   type ProgressRecord,
   type SelfReportedSkill,
@@ -57,11 +68,16 @@ function rowRank(row: CredentialRow) {
 
 export default function SkillsDashboard({ session }: { session: AuthSession }) {
   const isDirector = session.profile.role === "director";
+  const isMentor = session.profile.role === "mentor";
+  const isMentee = session.profile.role === "mentee";
   const [workers, setWorkers] = useState<UserProfile[]>([]);
   const [progress, setProgress] = useState<Record<string, ProgressRecord>>({});
   const [endorsements, setEndorsements] = useState<Endorsement[]>([]);
   const [manualCredentials, setManualCredentials] = useState<SkillCredential[]>([]);
   const [selfReports, setSelfReports] = useState<SelfReportedSkill[]>([]);
+  const [demonstrationRequests, setDemonstrationRequests] = useState<
+    DemonstrationRequest[]
+  >([]);
   const [query, setQuery] = useState("");
   const [levelFilter, setLevelFilter] = useState<LevelFilter>("all");
   const [areaFilter, setAreaFilter] = useState("all");
@@ -75,6 +91,9 @@ export default function SkillsDashboard({ session }: { session: AuthSession }) {
 
   useEffect(() => {
     const reportError = (error: string) => setMessage(error);
+    if (isMentee) {
+      return watchMentors(setWorkers, reportError);
+    }
     const stopUsers = watchAllUsers((users) => {
       const activeWorkers = users.filter(
         (user) => user.active && user.role !== "director",
@@ -97,14 +116,70 @@ export default function SkillsDashboard({ session }: { session: AuthSession }) {
       setSelfReports,
       reportError,
     );
+    const stopRequests = isMentor
+      ? watchMentorDemonstrationRequests(
+          session.profile.uid,
+          setDemonstrationRequests,
+          reportError,
+        )
+      : () => undefined;
     return () => {
       stopUsers();
       stopProgress();
       stopEndorsements();
       stopCredentials();
       stopReports();
+      stopRequests();
     };
-  }, [session.profile]);
+  }, [isMentee, isMentor, session.profile]);
+
+  const mentorIdsKey = workers.map((worker) => worker.uid).join("|");
+
+  useEffect(() => {
+    if (!isMentee) return;
+    const reportError = (error: string) => setMessage(error);
+    const reportSlices = new Map<string, SelfReportedSkill[]>();
+    const credentialSlices = new Map<string, SkillCredential[]>();
+    const endorsementSlices = new Map<string, Endorsement[]>();
+    const publishReports = () =>
+      setSelfReports(Array.from(reportSlices.values()).flat());
+    const publishCredentials = () =>
+      setManualCredentials(Array.from(credentialSlices.values()).flat());
+    const publishEndorsements = () =>
+      setEndorsements(Array.from(endorsementSlices.values()).flat());
+    const stops = workers.flatMap((worker) => [
+      watchMemberSelfReportedSkills(
+        worker.uid,
+        (items) => {
+          reportSlices.set(worker.uid, items);
+          publishReports();
+        },
+        reportError,
+      ),
+      watchMemberSkillCredentials(
+        worker.uid,
+        (items) => {
+          credentialSlices.set(worker.uid, items);
+          publishCredentials();
+        },
+        reportError,
+      ),
+      watchEndorsements(
+        worker.uid,
+        (items) => {
+          endorsementSlices.set(worker.uid, items);
+          publishEndorsements();
+        },
+        reportError,
+      ),
+    ]);
+    if (!workers.length) {
+      setSelfReports([]);
+      setManualCredentials([]);
+      setEndorsements([]);
+    }
+    return () => stops.forEach((stop) => stop());
+  }, [isMentee, mentorIdsKey]);
 
   const rows = useMemo(() => {
     const manualByKey = new Map(
@@ -134,7 +209,8 @@ export default function SkillsDashboard({ session }: { session: AuthSession }) {
         const endorsementCount = endorsementCounts.get(key) ?? 0;
         const status = progress[worker.uid]?.statuses[skill.id];
         const isMentorVerified =
-          endorsementCount > 0 && (status === "ready" || status === "complete");
+          endorsementCount > 0 &&
+          (Boolean(reported) || status === "ready" || status === "complete");
         const verifiedLevel: VerifiedLevel | null = manual
           ? manual.level
           : isMentorVerified
@@ -281,6 +357,87 @@ export default function SkillsDashboard({ session }: { session: AuthSession }) {
     }
   };
 
+  const toggleEndorsement = async (row: CredentialRow) => {
+    if (!isMentor || row.worker.uid === session.profile.uid || busy) return;
+    const existing = endorsements.find(
+      (item) =>
+        item.menteeId === row.worker.uid &&
+        item.skillId === row.skill.id &&
+        item.mentorId === session.profile.uid,
+    );
+    setBusy(true);
+    try {
+      if (existing) {
+        await removeEndorsement(existing.id);
+        setUndoAction({
+          message: "Endorsement removed.",
+          run: () =>
+            addEndorsement(
+              row.worker.uid,
+              row.skill.id,
+              session.profile,
+            ).then(() => undefined),
+        });
+        setMessage(`Your endorsement for ${row.skill.title} was removed.`);
+      } else {
+        const id = await addEndorsement(
+          row.worker.uid,
+          row.skill.id,
+          session.profile,
+        );
+        setUndoAction({
+          message: "Skill endorsed.",
+          run: () => removeEndorsement(id),
+        });
+        setMessage(
+          `You endorsed ${row.worker.displayName} for ${row.skill.title}.`,
+        );
+      }
+    } catch (error) {
+      setMessage(readableFirebaseError(error));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const toggleDemonstrationRequest = async (row: CredentialRow) => {
+    if (!isMentor || row.worker.uid === session.profile.uid || busy) return;
+    const existing = demonstrationRequests.find(
+      (item) =>
+        item.memberId === row.worker.uid && item.skillId === row.skill.id,
+    );
+    setBusy(true);
+    try {
+      if (existing) {
+        await removeDemonstrationRequest(existing.id);
+        setUndoAction({
+          message: "Demonstration request canceled.",
+          run: () => restoreDemonstrationRequest(existing),
+        });
+        setMessage(
+          `The demonstration request for ${row.skill.title} was canceled.`,
+        );
+      } else {
+        const id = await requestSkillDemonstration(
+          row.worker,
+          row.skill.id,
+          session.profile,
+        );
+        setUndoAction({
+          message: "Demonstration requested.",
+          run: () => removeDemonstrationRequest(id),
+        });
+        setMessage(
+          `${row.worker.displayName} was asked to demonstrate ${row.skill.title}.`,
+        );
+      }
+    } catch (error) {
+      setMessage(readableFirebaseError(error));
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const undoLastAction = async () => {
     if (!undoAction || busy) return;
     const action = undoAction;
@@ -300,12 +457,16 @@ export default function SkillsDashboard({ session }: { session: AuthSession }) {
     <>
       <section className="tool-hero skills-dashboard-hero">
         <div>
-          <span className="eyebrow">Team capability directory</span>
-          <h1>Who can do the work—and teach it?</h1>
+          <span className="eyebrow">
+            {isMentee ? "Mentor capability directory" : "Team capability directory"}
+          </span>
+          <h1>
+            {isMentee ? "Find the right mentor for the skill." : "Who can do the work—and teach it?"}
+          </h1>
           <p>
-            Self-reported Silver and Gold claims appear in search immediately,
-            but never look verified by default. Mentor endorsement and faculty
-            verification are shown separately so staffing decisions have context.
+            {isMentee
+              ? "Browse every active mentor’s self-reported and verified badges so you know who can help, demonstrate a workflow, or provide training."
+              : "Self-reported Silver and Gold claims appear in search immediately, but never look verified by default. Mentor endorsement and faculty verification are shown separately so staffing decisions have context."}
           </p>
         </div>
         <div className="development-key" aria-label="Verification key">
@@ -316,12 +477,12 @@ export default function SkillsDashboard({ session }: { session: AuthSession }) {
       </section>
 
       <section className="skills-summary-grid" aria-label="Team skills summary">
-        <article><span>Verified Gold people</span><strong>{verifiedGoldWorkers}</strong><small>confirmed to train others</small></article>
-        <article><span>Verified Silver people</span><strong>{verifiedSilverWorkers}</strong><small>confirmed for requested work</small></article>
+        <article><span>Verified Gold {isMentee ? "mentors" : "people"}</span><strong>{verifiedGoldWorkers}</strong><small>confirmed to train others</small></article>
+        <article><span>Verified Silver {isMentee ? "mentors" : "people"}</span><strong>{verifiedSilverWorkers}</strong><small>confirmed for requested work</small></article>
         <article><span>Awaiting verification</span><strong>{unverifiedClaims}</strong><small>self-reported badge claims</small></article>
       </section>
 
-      <MemberDirectory session={session} />
+      {!isMentee ? <MemberDirectory session={session} /> : null}
 
       {isDirector ? (
         <section className="credential-editor" id="credential-editor">
@@ -368,7 +529,7 @@ export default function SkillsDashboard({ session }: { session: AuthSession }) {
 
       <section className="dashboard-section credentials-section">
         <div className="section-title">
-          <div><span className="eyebrow">Searchable team roster</span><h2>Student skills</h2><p>Search both claims and verified skills; use the evidence labels before assigning work or training.</p></div>
+          <div><span className="eyebrow">Searchable {isMentee ? "mentor" : "team"} roster</span><h2>{isMentee ? "Mentor skills" : "Student skills"}</h2><p>Search both claims and verified skills; use the evidence labels before asking for help, assigning work, or requesting training.</p></div>
         </div>
 
         <div className="skills-filter-bar">
@@ -381,7 +542,7 @@ export default function SkillsDashboard({ session }: { session: AuthSession }) {
 
         <div className="credentials-table-wrap">
           <table className="credentials-table verification-table">
-            <thead><tr><th>Student worker</th><th>Skill</th><th>Area</th><th>Self-report</th><th>Verification</th><th>Evidence</th>{isDirector ? <th>Action</th> : null}</tr></thead>
+            <thead><tr><th>{isMentee ? "Mentor" : "Student worker"}</th><th>Skill</th><th>Area</th><th>Self-report</th><th>Verification</th><th>Evidence</th>{isDirector || isMentor ? <th>Action</th> : null}</tr></thead>
             <tbody>
               {visibleRows.map((row) => (
                 <tr key={row.key}>
@@ -409,6 +570,22 @@ export default function SkillsDashboard({ session }: { session: AuthSession }) {
                     {!row.reported?.evidence && !row.manual?.note && !row.endorsementCount ? <span className="evidence-none">No note supplied</span> : null}
                   </td>
                   {isDirector ? <td data-label="Action"><div className="credential-actions"><button type="button" onClick={() => editCredential(row)}>{row.manual ? "Edit" : "Verify"}</button>{row.manual ? <button type="button" className="remove-credential" onClick={() => void removeCredential(row)} disabled={busy}>Remove</button> : null}</div></td> : null}
+                  {isMentor ? (
+                    <td data-label="Action">
+                      {row.worker.uid === session.profile.uid ? (
+                        <span className="evidence-none">Your badge</span>
+                      ) : (
+                        <div className="credential-actions mentor-review-actions">
+                          <button type="button" onClick={() => void toggleEndorsement(row)} disabled={busy}>
+                            {endorsements.some((item) => item.menteeId === row.worker.uid && item.skillId === row.skill.id && item.mentorId === session.profile.uid) ? "Remove endorsement" : "Endorse"}
+                          </button>
+                          <button type="button" className="request-demo-button" onClick={() => void toggleDemonstrationRequest(row)} disabled={busy}>
+                            {demonstrationRequests.some((item) => item.memberId === row.worker.uid && item.skillId === row.skill.id) ? "Cancel demo request" : "Request demo"}
+                          </button>
+                        </div>
+                      )}
+                    </td>
+                  ) : null}
                 </tr>
               ))}
             </tbody>

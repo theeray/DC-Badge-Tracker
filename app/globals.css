@@ -2047,6 +2047,42 @@ input:focus-visible {
   justify-content: flex-end;
 }
 
+.mentor-skill-actions,
+.self-skill-actions {
+  display: flex;
+  width: 154px;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.request-demo-button,
+.demo-requested-button {
+  min-height: 34px;
+  border: 1px solid #e5a43c;
+  border-radius: 7px;
+  background: var(--soft-orange);
+  color: #8b5100;
+  cursor: pointer;
+  font-size: 9px;
+  font-weight: 900;
+  padding: 0 12px;
+}
+
+.demo-requested-button {
+  border-color: var(--mint);
+  background: var(--soft-green);
+  color: var(--green);
+}
+
+.demo-request-note {
+  border-left: 3px solid var(--orange);
+  color: #8b5100;
+  font-size: 9px;
+  font-weight: 800;
+  line-height: 1.35;
+  padding: 5px 7px;
+}
+
 .status-button {
   display: flex;
   width: 138px;
@@ -3577,7 +3613,14 @@ input:focus-visible {
   .status-button,
   .skill-action .endorse-button,
   .skill-action .endorsed,
-  .skill-action .awaiting-button {
+  .skill-action .awaiting-button,
+  .skill-action .request-demo-button,
+  .skill-action .demo-requested-button {
+    width: 100%;
+  }
+
+  .mentor-skill-actions,
+  .self-skill-actions {
     width: 100%;
   }
 
@@ -4000,7 +4043,10 @@ input:focus-visible {
   .status-button,
   .skill-action .endorse-button,
   .skill-action .endorsed,
-  .skill-action .awaiting-button { min-height: 52px; font-size: 17px; }
+  .skill-action .awaiting-button,
+  .skill-action .request-demo-button,
+  .skill-action .demo-requested-button { min-height: 52px; font-size: 17px; }
+  .demo-request-note { font-size: 15px; }
   .empty-state strong { font-size: 22px; }
   .empty-state p { font-size: 18px; }
 
@@ -5039,6 +5085,17 @@ select:focus-visible {
 .credential-actions {
   display: flex;
   gap: 6px;
+}
+
+.credential-actions.mentor-review-actions {
+  min-width: 142px;
+  flex-direction: column;
+}
+
+.credential-actions .request-demo-button {
+  border-color: #e5a43c;
+  background: var(--soft-orange);
+  color: #8b5100;
 }
 
 .entry-actions {

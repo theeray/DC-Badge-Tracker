@@ -46,9 +46,7 @@ export const learningAreas: LearningArea[] = [
       skill(ONBOARDING, "Training & Skill Building", "on-work-study-eligibility", "Check Work-Study Eligibility", { href: "https://www.iorad.com/player/2450841/Check-to-see-if-you-are-eligible-for-Work-Study---Payroll-at-Bemidji-State-University" }),
       skill(ONBOARDING, "Training & Skill Building", "on-payroll", "Work Study & Payroll Paperwork", { href: "https://www.iorad.com/player/2432928/Fill-Out-Work-Study---Payroll-Paperwork-for-Digital-Corps", searchTerms: ["fill out paperwork", "filling out the paperwork", "regular payroll"], initialStatus: "complete", initialEndorsements: 1 }),
       skill(ONBOARDING, "Training & Skill Building", "on-files", "File Organization Guide", { href: "/resources/onboarding/file-organization-guide.pdf", initialStatus: "complete", initialEndorsements: 2 }),
-      skill(ONBOARDING, "Training & Skill Building", "on-project-setup", "Set Up a Digital Corps Project", { href: "/resources/onboarding/setting-up-a-project-guide.pdf", searchTerms: ["project folder", "start a project", "file setup"] }),
       skill(ONBOARDING, "Training & Skill Building", "on-planner", "Use MS Teams Planner", { href: "https://youtu.be/r3dpzqttDuA", initialStatus: "complete", initialEndorsements: 1 }),
-      skill(ONBOARDING, "Training & Skill Building", "on-badge", "Use a Badge Card", { href: "https://www.iorad.com/player/2482475/How-to-use-a-TAD-Badge-Card", initialStatus: "complete", initialEndorsements: 2 }),
       skill(ONBOARDING, "Training & Skill Building", "on-hours", "Enter Submitted Payroll Hours", { href: "/resources/onboarding/enter-work-hours-steps.docx", searchTerms: ["e-services", "student employment", "timesheet"], initialStatus: "learning" }),
       skill(ONBOARDING, "Client Relations", "on-primary", "How to Make Primary Contact", { href: "https://www.iorad.com/player/2433316/Social-Media-Campaign-1--How-to-Make-First-Contact", initialStatus: "complete", initialEndorsements: 2 }),
       skill(ONBOARDING, "Client Relations", "on-meeting", "Client Meeting Checklist", { href: "/resources/onboarding/client-meeting-checklist.docx", initialStatus: "learning" }),
@@ -59,9 +57,6 @@ export const learningAreas: LearningArea[] = [
       skill(ONBOARDING, "Client Relations", "on-presentation", "Make a Digital Presentation with InDesign", { href: "https://www.iorad.com/player/2607783/Make-a-Digital-Presentation-with-InDesign" }),
       skill(ONBOARDING, "Client Relations", "on-costing", "Fill out TAD Costing Estimator", { href: "https://www.iorad.com/player/2477485/Fill-out-the-TAD-Costing-FORM" }),
       skill(ONBOARDING, "Client Relations", "on-make-brief", "Make a Creative Brief", { href: "https://www.iorad.com/player/2447654/Editing-a-Digital-Corps-Creative-Brief" }),
-      skill(ONBOARDING, "Client Relations", "on-job-sheet", "Use Job Request Spreadsheet", { href: "https://www.iorad.com/player/2141221/Use-the-OFFICIAL-Digital-Corps-Job-Request-Spreadsheet" }),
-
-      skill(ONBOARDING, "Finished Project Checklist", "on-flow", "Project Flow Chart", { href: "/resources/onboarding/digital-corps-flow-chart.pdf", initialStatus: "complete", initialEndorsements: 1 }),
       skill(ONBOARDING, "Finished Project Checklist", "on-checklist", "Digital Corps Project Checklist", { href: "/resources/onboarding/digital-corps-checklist.pdf", initialStatus: "ready" }),
       skill(ONBOARDING, "Finished Project Checklist", "on-grammar", "Grammar Check", { initialStatus: "learning" }),
       skill(ONBOARDING, "Finished Project Checklist", "on-ai-spell", "Spellcheck: Illustrator", { href: "https://youtu.be/ns6orFTwDwE?si=wr3wEI44Os7W0A74" }),
@@ -158,7 +153,6 @@ export const learningAreas: LearningArea[] = [
       skill(SOCIAL, "Client Relations", "sm-presentation", "Make a Digital Presentation with InDesign", { href: "https://www.iorad.com/player/2607783/Make-a-Digital-Presentation-with-InDesign" }),
       skill(SOCIAL, "Client Relations", "sm-costing", "Fill out TAD Costing Estimator", { href: "https://www.iorad.com/player/2477485/Fill-out-the-TAD-Costing-FORM" }),
       skill(SOCIAL, "Client Relations", "sm-make-brief", "Make a Creative Brief", { href: "https://www.iorad.com/player/2447654/Editing-a-Digital-Corps-Creative-Brief" }),
-      skill(SOCIAL, "Client Relations", "sm-job-sheet", "Use Job Request Spreadsheet", { href: "https://www.iorad.com/player/2141221/Use-the-OFFICIAL-Digital-Corps-Job-Request-Spreadsheet" }),
     ],
   },
   {
@@ -168,9 +162,7 @@ export const learningAreas: LearningArea[] = [
     eyebrow: "Guide the team",
     description: "Project ownership, meetings, mentoring, and teaching others through clear tutorials.",
     skills: [
-      skill(LEADERSHIP, "Training & Skill Building", "lead-badge", "Use a Badge Card", { href: "https://www.iorad.com/player/2482475/How-to-use-a-TAD-Badge-Card", initialStatus: "complete", initialEndorsements: 2 }),
       skill(LEADERSHIP, "Training & Skill Building", "lead-planner", "Use MS Teams Planner", { href: "https://youtu.be/r3dpzqttDuA", initialStatus: "complete", initialEndorsements: 1 }),
-      skill(LEADERSHIP, "Training & Skill Building", "lead-flow", "Project Flow Chart", { href: "/resources/onboarding/digital-corps-flow-chart.pdf", initialStatus: "ready" }),
       skill(LEADERSHIP, "Training & Skill Building", "lead-checklist", "Digital Corps Project Checklist", { href: "/resources/onboarding/digital-corps-checklist.pdf", initialStatus: "learning" }),
       skill(LEADERSHIP, "Training & Skill Building", "lead-primary", "How to Make Primary Contact", { href: "https://www.iorad.com/player/2433316/Social-Media-Campaign-1--How-to-Make-First-Contact", initialStatus: "complete", initialEndorsements: 3 }),
       skill(LEADERSHIP, "Training & Skill Building", "lead-meeting", "Client Meeting Checklist", { href: "/resources/onboarding/client-meeting-checklist.docx", initialStatus: "learning" }),

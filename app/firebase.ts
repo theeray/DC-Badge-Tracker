@@ -101,6 +101,15 @@ export type Endorsement = {
   mentorName: string;
 };
 
+export type DemonstrationRequest = {
+  id: string;
+  memberId: string;
+  memberName: string;
+  skillId: string;
+  mentorId: string;
+  mentorName: string;
+};
+
 export type ProgressRecord = {
   ownerId: string;
   statuses: Record<string, SkillStatus>;
@@ -455,6 +464,48 @@ export function watchMentees(
     query(
       collection(db, "users"),
       where("role", "==", "mentee"),
+      where("active", "==", true),
+    ),
+    (snapshot) =>
+      onChange(
+        snapshot.docs
+          .map((item) => profileFromDocument(item.id, item.data()))
+          .sort((a, b) => a.displayName.localeCompare(b.displayName)),
+      ),
+    (error) => onError(readableFirebaseError(error)),
+  );
+}
+
+export function watchStudentWorkers(
+  reviewerId: string,
+  onChange: (members: UserProfile[]) => void,
+  onError: (message: string) => void,
+) {
+  return onSnapshot(
+    query(collection(db, "users"), where("active", "==", true)),
+    (snapshot) =>
+      onChange(
+        snapshot.docs
+          .map((item) => profileFromDocument(item.id, item.data()))
+          .filter(
+            (item) =>
+              item.uid !== reviewerId &&
+              (item.role === "mentee" || item.role === "mentor"),
+          )
+          .sort((a, b) => a.displayName.localeCompare(b.displayName)),
+      ),
+    (error) => onError(readableFirebaseError(error)),
+  );
+}
+
+export function watchMentors(
+  onChange: (mentors: UserProfile[]) => void,
+  onError: (message: string) => void,
+) {
+  return onSnapshot(
+    query(
+      collection(db, "users"),
+      where("role", "==", "mentor"),
       where("active", "==", true),
     ),
     (snapshot) =>
@@ -930,6 +981,26 @@ export function watchSelfReportedSkills(
   );
 }
 
+export function watchMemberSelfReportedSkills(
+  memberId: string,
+  onChange: (reports: SelfReportedSkill[]) => void,
+  onError: (message: string) => void,
+) {
+  return onSnapshot(
+    query(
+      collection(db, "selfReportedSkills"),
+      where("memberId", "==", memberId),
+    ),
+    (snapshot) =>
+      onChange(
+        snapshot.docs.map((item) =>
+          selfReportedSkillFromDocument(item.id, item.data()),
+        ),
+      ),
+    (error) => onError(readableFirebaseError(error)),
+  );
+}
+
 export async function saveSelfReportedSkill(
   member: UserProfile,
   skillId: string,
@@ -957,6 +1028,106 @@ export async function saveSelfReportedSkill(
     });
   }
   return id;
+}
+
+function demonstrationRequestFromDocument(
+  id: string,
+  data: DocumentData,
+): DemonstrationRequest {
+  return {
+    id,
+    memberId: String(data.memberId ?? ""),
+    memberName: String(data.memberName ?? "Digital Corps member"),
+    skillId: String(data.skillId ?? ""),
+    mentorId: String(data.mentorId ?? ""),
+    mentorName: String(data.mentorName ?? "Student mentor"),
+  };
+}
+
+export function watchDemonstrationRequests(
+  memberId: string,
+  viewer: UserProfile,
+  onChange: (requests: DemonstrationRequest[]) => void,
+  onError: (message: string) => void,
+) {
+  const source =
+    viewer.role === "mentor" && viewer.uid !== memberId
+      ? query(
+          collection(db, "demonstrationRequests"),
+          where("memberId", "==", memberId),
+          where("mentorId", "==", viewer.uid),
+        )
+      : query(
+          collection(db, "demonstrationRequests"),
+          where("memberId", "==", memberId),
+        );
+  return onSnapshot(
+    source,
+    (snapshot) =>
+      onChange(
+        snapshot.docs.map((item) =>
+          demonstrationRequestFromDocument(item.id, item.data()),
+        ),
+      ),
+    (error) => onError(readableFirebaseError(error)),
+  );
+}
+
+export function watchMentorDemonstrationRequests(
+  mentorId: string,
+  onChange: (requests: DemonstrationRequest[]) => void,
+  onError: (message: string) => void,
+) {
+  return onSnapshot(
+    query(
+      collection(db, "demonstrationRequests"),
+      where("mentorId", "==", mentorId),
+    ),
+    (snapshot) =>
+      onChange(
+        snapshot.docs.map((item) =>
+          demonstrationRequestFromDocument(item.id, item.data()),
+        ),
+      ),
+    (error) => onError(readableFirebaseError(error)),
+  );
+}
+
+export async function requestSkillDemonstration(
+  member: UserProfile,
+  skillId: string,
+  mentor: UserProfile,
+) {
+  if (mentor.role !== "mentor" || member.uid === mentor.uid) {
+    throw new Error("A mentor can request a demonstration from another student member.");
+  }
+  const id = `${member.uid}_${skillId}_${mentor.uid}`;
+  await setDoc(doc(db, "demonstrationRequests", id), {
+    memberId: member.uid,
+    memberName: member.displayName,
+    skillId,
+    mentorId: mentor.uid,
+    mentorName: mentor.displayName,
+    createdAt: serverTimestamp(),
+  });
+  return id;
+}
+
+export async function removeDemonstrationRequest(id: string) {
+  await deleteDoc(doc(db, "demonstrationRequests", id));
+}
+
+export async function restoreDemonstrationRequest(
+  request: DemonstrationRequest,
+) {
+  await setDoc(doc(db, "demonstrationRequests", request.id), {
+    memberId: request.memberId,
+    memberName: request.memberName,
+    skillId: request.skillId,
+    mentorId: request.mentorId,
+    mentorName: request.mentorName,
+    createdAt: serverTimestamp(),
+  });
 }
 
 export async function removeSelfReportedSkill(id: string) {

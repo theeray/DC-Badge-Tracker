@@ -151,6 +151,24 @@ test("mentee can edit only their own progress", async () => {
   );
 });
 
+test("mentors track their own progress without altering another member", async () => {
+  const mentorDb = authenticated(identities.mentor);
+  await assertSucceeds(
+    setDoc(doc(mentorDb, "progress", identities.mentor.uid), {
+      ownerId: identities.mentor.uid,
+      statuses: { "camera-skill": "learning" },
+      updatedAt: serverTimestamp(),
+    }),
+  );
+  await assertFails(
+    setDoc(doc(mentorDb, "progress", identities.mentee.uid), {
+      ownerId: identities.mentee.uid,
+      statuses: { "ready-skill": "complete" },
+      updatedAt: serverTimestamp(),
+    }),
+  );
+});
+
 test("mentor can read progress and endorse a ready skill", async () => {
   const mentorDb = authenticated(identities.mentor);
   await assertSucceeds(
@@ -457,6 +475,121 @@ test("student workers self-report their own badges and staff see the claim", asy
       level: "Platinum",
       updatedAt: serverTimestamp(),
     }),
+  );
+});
+
+test("mentees can browse mentor badge claims without listing mentee accounts", async () => {
+  const mentorDb = authenticated(identities.mentor);
+  const menteeDb = authenticated(identities.mentee);
+  await assertSucceeds(
+    setDoc(doc(mentorDb, "selfReportedSkills", `${identities.mentor.uid}_camera-skill`), {
+      memberId: identities.mentor.uid,
+      memberName: identities.mentor.displayName,
+      skillId: "camera-skill",
+      level: "Gold",
+      evidence: "Can train other students on the camera kit",
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    }),
+  );
+  await assertSucceeds(
+    getDocs(
+      query(
+        collection(menteeDb, "users"),
+        where("role", "==", "mentor"),
+        where("active", "==", true),
+      ),
+    ),
+  );
+  await assertFails(
+    getDocs(
+      query(
+        collection(menteeDb, "users"),
+        where("role", "==", "mentee"),
+        where("active", "==", true),
+      ),
+    ),
+  );
+  await assertSucceeds(
+    getDocs(
+      query(
+        collection(menteeDb, "selfReportedSkills"),
+        where("memberId", "==", identities.mentor.uid),
+      ),
+    ),
+  );
+  await assertSucceeds(
+    getDocs(
+      query(
+        collection(menteeDb, "skillCredentials"),
+        where("workerId", "==", identities.mentor.uid),
+      ),
+    ),
+  );
+});
+
+test("a mentor can endorse a self-report but cannot endorse themself", async () => {
+  const secondMentorDb = authenticated(identities.mentor2);
+  const mentorDb = authenticated(identities.mentor);
+  await assertSucceeds(
+    setDoc(doc(secondMentorDb, "endorsements", "mentor-camera-endorsement"), {
+      menteeId: identities.mentor.uid,
+      skillId: "camera-skill",
+      mentorId: identities.mentor2.uid,
+      mentorName: identities.mentor2.displayName,
+      createdAt: serverTimestamp(),
+    }),
+  );
+  await assertFails(
+    setDoc(doc(mentorDb, "endorsements", "mentor-self-endorsement"), {
+      menteeId: identities.mentor.uid,
+      skillId: "camera-skill",
+      mentorId: identities.mentor.uid,
+      mentorName: identities.mentor.displayName,
+      createdAt: serverTimestamp(),
+    }),
+  );
+  const menteeDb = authenticated(identities.mentee);
+  await assertSucceeds(
+    getDocs(
+      query(
+        collection(menteeDb, "endorsements"),
+        where("menteeId", "==", identities.mentor.uid),
+      ),
+    ),
+  );
+});
+
+test("mentor demonstration requests are visible and reversible", async () => {
+  const mentorDb = authenticated(identities.mentor);
+  const secondMentorDb = authenticated(identities.mentor2);
+  const menteeDb = authenticated(identities.mentee);
+  const request = {
+    memberId: identities.mentee.uid,
+    memberName: identities.mentee.displayName,
+    skillId: "poster-design",
+    mentorId: identities.mentor.uid,
+    mentorName: identities.mentor.displayName,
+    createdAt: serverTimestamp(),
+  };
+  await assertSucceeds(
+    setDoc(doc(mentorDb, "demonstrationRequests", "mentee-poster-demo"), request),
+  );
+  await assertSucceeds(
+    getDoc(doc(menteeDb, "demonstrationRequests", "mentee-poster-demo")),
+  );
+  await assertFails(
+    getDoc(doc(secondMentorDb, "demonstrationRequests", "mentee-poster-demo")),
+  );
+  await assertSucceeds(
+    deleteDoc(doc(mentorDb, "demonstrationRequests", "mentee-poster-demo")),
+  );
+  await assertSucceeds(
+    setDoc(doc(mentorDb, "demonstrationRequests", "mentee-poster-demo"), request),
+  );
+  const directorDb = authenticated(identities.director);
+  await assertSucceeds(
+    deleteDoc(doc(directorDb, "demonstrationRequests", "mentee-poster-demo")),
   );
 });
 

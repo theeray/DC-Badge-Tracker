@@ -4,36 +4,17 @@
     "indexes": "firebase/firestore.indexes.json"
   },
   "hosting": {
-    "public": "firebase-dist",
+    "public": "firebase-redirect",
     "ignore": [
       "firebase.json",
       "**/.*",
       "**/node_modules/**"
     ],
-    "rewrites": [
+    "redirects": [
       {
         "source": "**",
-        "destination": "/index.html"
-      }
-    ],
-    "headers": [
-      {
-        "source": "**/*.@(js|css|woff2|png|jpg|jpeg|svg)",
-        "headers": [
-          {
-            "key": "Cache-Control",
-            "value": "public,max-age=31536000,immutable"
-          }
-        ]
-      },
-      {
-        "source": "/index.html",
-        "headers": [
-          {
-            "key": "Cache-Control",
-            "value": "no-cache"
-          }
-        ]
+        "destination": "https://dc-badges.web.app/",
+        "type": 301
       }
     ]
   }

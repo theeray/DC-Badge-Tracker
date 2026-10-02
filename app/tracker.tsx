@@ -20,16 +20,23 @@ import {
 import {
   addEndorsement,
   readableFirebaseError,
+  removeDemonstrationRequest,
   removeEndorsement,
+  requestSkillDemonstration,
+  restoreDemonstrationRequest,
   saveProgress,
   signOutCurrentUser,
   watchAuthSession,
+  watchDemonstrationRequests,
   watchEndorsements,
+  watchMemberSelfReportedSkills,
   watchMemberSkillCredentials,
-  watchMentees,
   watchProgress,
+  watchStudentWorkers,
   type AuthSession,
+  type DemonstrationRequest,
   type Endorsement,
+  type SelfReportedSkill,
   type SkillCredential,
   type UserProfile,
 } from "./firebase";
@@ -41,6 +48,8 @@ type UndoAction = {
   message: string;
   run: () => Promise<void>;
 };
+
+const SELF_TRACKING_ID = "__self__";
 
 const defaultStatuses = Object.fromEntries(
   allSkills.map((item) => [item.id, "not-started"]),
@@ -515,6 +524,8 @@ function TrackerWorkspace({
   const [sessionEndorsed, setSessionEndorsed] = useState<string[]>([]);
   const [endorsementRecords, setEndorsementRecords] = useState<Endorsement[]>([]);
   const [credentialRecords, setCredentialRecords] = useState<SkillCredential[]>([]);
+  const [selfReportedSkills, setSelfReportedSkills] = useState<SelfReportedSkill[]>([]);
+  const [demonstrationRequests, setDemonstrationRequests] = useState<DemonstrationRequest[]>([]);
   const [mentees, setMentees] = useState<UserProfile[]>([]);
   const [selectedMenteeId, setSelectedMenteeId] = useState("");
   const [selectedGroup, setSelectedGroup] = useState("All skills");
@@ -532,13 +543,18 @@ function TrackerWorkspace({
     if (role !== "mentor" && role !== "director") {
       return;
     }
-    return watchMentees(
+    return watchStudentWorkers(
+      session?.profile.uid ?? "",
       (nextMentees) => {
         setMentees(nextMentees);
         setSelectedMenteeId((current) =>
-          current && nextMentees.some((item) => item.uid === current)
+          role === "mentor" && current === SELF_TRACKING_ID
             ? current
-            : (nextMentees[0]?.uid ?? ""),
+            : current && nextMentees.some((item) => item.uid === current)
+            ? current
+            : role === "mentor"
+              ? SELF_TRACKING_ID
+              : (nextMentees[0]?.uid ?? ""),
         );
       },
       (message) => {
@@ -546,14 +562,22 @@ function TrackerWorkspace({
         setSyncState("error");
       },
     );
-  }, [role]);
+  }, [role, session?.profile.uid]);
 
   const targetMenteeId =
-    role === "mentee" ? (session?.profile.uid ?? "") : selectedMenteeId;
+    role === "mentee" ||
+    (role === "mentor" && selectedMenteeId === SELF_TRACKING_ID)
+      ? (session?.profile.uid ?? "")
+      : selectedMenteeId;
   const selectedMentee =
-    role === "mentee"
+    role === "mentee" ||
+    (role === "mentor" && selectedMenteeId === SELF_TRACKING_ID)
       ? session?.profile
       : mentees.find((item) => item.uid === targetMenteeId);
+  const isSelfTracking =
+    Boolean(session?.profile.uid) && targetMenteeId === session?.profile.uid;
+  const isReviewer = role === "mentor" || role === "director";
+  const isReviewingMember = isReviewer && !isSelfTracking;
 
   useEffect(() => {
     if (!targetMenteeId) {
@@ -563,6 +587,8 @@ function TrackerWorkspace({
         setSessionEndorsed([]);
         setEndorsementRecords([]);
         setCredentialRecords([]);
+        setSelfReportedSkills([]);
+        setDemonstrationRequests([]);
         setSyncState(role === "guest" ? "guest" : "saved");
       }, 0);
       return () => window.clearTimeout(timer);
@@ -607,11 +633,32 @@ function TrackerWorkspace({
         setSyncState("error");
       },
     );
+    const stopReports = watchMemberSelfReportedSkills(
+      targetMenteeId,
+      setSelfReportedSkills,
+      (message) => {
+        setAnnouncement(message);
+        setSyncState("error");
+      },
+    );
+    const stopRequests = session?.profile
+      ? watchDemonstrationRequests(
+          targetMenteeId,
+          session.profile,
+          setDemonstrationRequests,
+          (message) => {
+            setAnnouncement(message);
+            setSyncState("error");
+          },
+        )
+      : () => undefined;
 
     return () => {
       stopProgress();
       stopEndorsements();
       stopCredentials();
+      stopReports();
+      stopRequests();
     };
   }, [role, session?.profile.uid, targetMenteeId]);
 
@@ -678,7 +725,7 @@ function TrackerWorkspace({
   };
 
   const advanceStatus = async (item: Skill) => {
-    if (role !== "mentee" || !targetMenteeId) return;
+    if (!isSelfTracking || !targetMenteeId) return;
     const current = statuses[item.id];
     const next = statusOrder[(statusOrder.indexOf(current) + 1) % statusOrder.length];
     const nextStatuses = { ...statuses, [item.id]: next };
@@ -711,7 +758,8 @@ function TrackerWorkspace({
       role !== "mentor" ||
       !session?.profile ||
       !targetMenteeId ||
-      !["ready", "complete"].includes(statuses[item.id])
+      !["ready", "complete"].includes(statuses[item.id]) &&
+      !selfReportedSkills.some((report) => report.skillId === item.id)
     ) return;
     try {
       const existing = endorsementRecords.find(
@@ -752,6 +800,52 @@ function TrackerWorkspace({
     }
   };
 
+  const toggleDemonstrationRequest = async (item: Skill) => {
+    if (
+      role !== "mentor" ||
+      !session?.profile ||
+      !selectedMentee ||
+      isSelfTracking
+    ) return;
+    const existing = demonstrationRequests.find(
+      (request) =>
+        request.skillId === item.id &&
+        request.mentorId === session.profile.uid,
+    );
+    try {
+      if (existing) {
+        await removeDemonstrationRequest(existing.id);
+        setAnnouncement(`The demonstration request for ${item.title} was canceled.`);
+        setUndoAction({
+          message: `Demonstration request canceled for ${item.title}.`,
+          run: async () => {
+            await restoreDemonstrationRequest(existing);
+            setAnnouncement(`The demonstration request for ${item.title} was restored.`);
+          },
+        });
+      } else {
+        const id = await requestSkillDemonstration(
+          selectedMentee,
+          item.id,
+          session.profile,
+        );
+        setAnnouncement(
+          `${selectedMentee.displayName} was asked to demonstrate ${item.title}.`,
+        );
+        setUndoAction({
+          message: `Demonstration requested for ${item.title}.`,
+          run: async () => {
+            await removeDemonstrationRequest(id);
+            setAnnouncement(`The demonstration request for ${item.title} was undone.`);
+          },
+        });
+      }
+    } catch (error) {
+      setAnnouncement(readableFirebaseError(error));
+      setSyncState("error");
+    }
+  };
+
   const undoLastAction = async () => {
     if (!undoAction || undoBusy) return;
     const action = undoAction;
@@ -782,7 +876,6 @@ function TrackerWorkspace({
         : role === "director"
           ? "Faculty director"
           : "Public resources";
-  const isReviewer = role === "mentor" || role === "director";
 
   return (
     <div className="app-shell">
@@ -816,9 +909,9 @@ function TrackerWorkspace({
               <span className="nav-index">◎</span><span>Assignments & badges</span>
             </button>
           ) : null}
-          {isReviewer ? (
+          {session ? (
             <button className={view === "skills-dashboard" ? "active" : ""} onClick={() => setActiveView("skills-dashboard")}>
-              <span className="nav-index">▦</span><span>Team directory</span>
+              <span className="nav-index">▦</span><span>{role === "mentee" ? "Mentor skills" : "Team directory"}</span>
             </button>
           ) : null}
           {role === "director" ? (
@@ -851,16 +944,21 @@ function TrackerWorkspace({
           </button>
           {isReviewer ? (
             <label className="mentee-picker">
-              <span>Reviewing</span>
+              <span>{role === "mentor" && isSelfTracking ? "Tracking" : "Reviewing"}</span>
               <select
                 value={selectedMenteeId}
                 onChange={(event) => setSelectedMenteeId(event.target.value)}
-                disabled={!mentees.length}
-                aria-label="Select mentee to review"
+                disabled={role === "director" && !mentees.length}
+                aria-label="Choose your badges or a student member to review"
               >
-                {!mentees.length ? <option value="">No activated mentees</option> : null}
+                {role === "mentor" ? (
+                  <option value={SELF_TRACKING_ID}>My badges &amp; tutorials</option>
+                ) : null}
+                {role === "director" && !mentees.length ? <option value="">No activated student members</option> : null}
                 {mentees.map((mentee) => (
-                  <option value={mentee.uid} key={mentee.uid}>{mentee.displayName}</option>
+                  <option value={mentee.uid} key={mentee.uid}>
+                    {mentee.displayName} · {mentee.role === "mentor" ? "Mentor" : "Mentee"}
+                  </option>
                 ))}
               </select>
             </label>
@@ -894,33 +992,33 @@ function TrackerWorkspace({
               <section className="hero-card">
                 <div className="hero-copy">
                   <span className="eyebrow">
-                    {role === "mentee"
+                    {isSelfTracking
                       ? "Your learning dashboard"
-                      : isReviewer
+                      : isReviewingMember
                         ? `${role === "director" ? "Director" : "Mentor"} endorsement desk`
                         : "Public Digital Corps resources"}
                   </span>
                   <h1>
-                    {role === "mentee"
+                    {isSelfTracking
                       ? "Make progress visible."
-                      : isReviewer
+                      : isReviewingMember
                         ? "Recognize skills in action."
                         : "Explore the learning paths."}
                   </h1>
                   <p>
-                    {role === "mentee"
+                    {isSelfTracking
                       ? "Complete tutorials to fill the silver ring, then request reviews so endorsed skills fill the orange ring and unlock each learning level."
-                      : isReviewer
+                      : isReviewingMember
                         ? selectedMentee
                           ? `Review ${selectedMentee.displayName}'s progress and endorse skills you have personally seen demonstrated.`
-                          : "Activated mentees will appear here for review."
+                          : "Activated student members will appear here for review."
                         : "Browse tutorials, practice projects, and official brand resources. Sign in to save progress."}
                   </p>
                   <div className="hero-actions">
-                    <button className="primary-button" onClick={() => setActiveView(role === "mentee" ? "content-creation" : "onboarding")}>
-                      {role === "mentee"
+                    <button className="primary-button" onClick={() => setActiveView(isSelfTracking ? "content-creation" : "onboarding")}>
+                      {isSelfTracking
                         ? "Continue learning"
-                        : isReviewer
+                        : isReviewingMember
                           ? `Review ${readyCount} ready skills`
                           : "Browse learning paths"} <span>→</span>
                     </button>
@@ -941,7 +1039,7 @@ function TrackerWorkspace({
                 <article><span className="stat-icon mint">✦</span><div><strong>{verifiedSkillCount}</strong><span>Verified skills</span></div><small>endorsed or faculty confirmed</small></article>
               </section>
 
-              {isReviewer ? (
+              {isReviewingMember ? (
                 <section className="dashboard-section">
                   <div className="section-title"><div><span className="eyebrow">Review queue</span><h2>Ready for your endorsement</h2></div><button onClick={() => setActiveView("content-creation")}>View all →</button></div>
                   <div className="review-list">
@@ -965,7 +1063,7 @@ function TrackerWorkspace({
                       </article>
                     ))}
                     {!allSkills.some((item) => statuses[item.id] === "ready") ? (
-                      <div className="empty-state"><strong>No skills awaiting review</strong><p>{selectedMentee ? `${selectedMentee.displayName} has not marked a skill ready yet.` : "No activated mentees are available yet."}</p></div>
+                      <div className="empty-state"><strong>No skills awaiting review</strong><p>{selectedMentee ? `${selectedMentee.displayName} has not marked a skill ready yet.` : "No activated student members are available yet."}</p></div>
                     ) : null}
                   </div>
                 </section>
@@ -1020,7 +1118,7 @@ function TrackerWorkspace({
             <MemberDevelopment session={session} onOpenSkill={setActiveView} />
           ) : null}
 
-          {view === "skills-dashboard" && isReviewer && session ? (
+          {view === "skills-dashboard" && session ? (
             <SkillsDashboard session={session} />
           ) : null}
 
@@ -1061,7 +1159,19 @@ function TrackerWorkspace({
                 {visibleSkills.map((item) => {
                   const itemStatus = statuses[item.id];
                   const isEndorsed = sessionEndorsed.includes(item.id);
-                  const canEndorse = itemStatus === "ready" || itemStatus === "complete";
+                  const hasSelfReport = selfReportedSkills.some(
+                    (report) => report.skillId === item.id,
+                  );
+                  const canEndorse =
+                    itemStatus === "ready" ||
+                    itemStatus === "complete" ||
+                    hasSelfReport;
+                  const skillRequests = demonstrationRequests.filter(
+                    (request) => request.skillId === item.id,
+                  );
+                  const currentMentorRequested = skillRequests.some(
+                    (request) => request.mentorId === session?.profile.uid,
+                  );
                   return (
                     <article className={`skill-row status-${itemStatus}`} key={item.id}>
                       <div className="status-marker"><span>{itemStatus === "complete" ? "✓" : itemStatus === "ready" ? "◎" : itemStatus === "learning" ? "◐" : ""}</span></div>
@@ -1072,14 +1182,26 @@ function TrackerWorkspace({
                       </div>
                       <EndorsementStack count={endorsements[item.id] ?? 0} />
                       <div className="skill-action">
-                        {role === "mentee" ? (
-                          <button className={`status-button status-${itemStatus}`} onClick={() => void advanceStatus(item)} title="Click to move to the next status">
-                            {statusLabels[itemStatus]} <span>⌄</span>
-                          </button>
+                        {isSelfTracking ? (
+                          <div className="self-skill-actions">
+                            {skillRequests.length ? (
+                              <span className="demo-request-note">
+                                Demo requested by {skillRequests.map((request) => request.mentorName).join(", ")}
+                              </span>
+                            ) : null}
+                            <button className={`status-button status-${itemStatus}`} onClick={() => void advanceStatus(item)} title="Click to move to the next status">
+                              {statusLabels[itemStatus]} <span>⌄</span>
+                            </button>
+                          </div>
                         ) : role === "mentor" ? (
-                          <button className={isEndorsed ? "endorsed" : canEndorse ? "endorse-button" : "awaiting-button"} onClick={() => void endorse(item)} disabled={!canEndorse}>
-                            {isEndorsed ? "Endorsed ✓" : canEndorse ? "Endorse skill" : "Awaiting review"}
-                          </button>
+                          <div className="mentor-skill-actions">
+                            <button className={isEndorsed ? "endorsed" : canEndorse ? "endorse-button" : "awaiting-button"} onClick={() => void endorse(item)} disabled={!canEndorse}>
+                              {isEndorsed ? "Endorsed ✓" : canEndorse ? "Endorse skill" : "Not ready to endorse"}
+                            </button>
+                            <button className={currentMentorRequested ? "demo-requested-button" : "request-demo-button"} onClick={() => void toggleDemonstrationRequest(item)}>
+                              {currentMentorRequested ? "Demo requested ✓" : "Request demo"}
+                            </button>
+                          </div>
                         ) : role === "director" ? (
                           <span className="director-review-label">Read only</span>
                         ) : (
@@ -1341,8 +1463,8 @@ function TrackerWorkspace({
           {session ? (
             <button className={view === "member-development" ? "active" : ""} onClick={() => setActiveView("member-development")}><span>◎</span>Assigned</button>
           ) : null}
-          {isReviewer ? (
-            <button className={view === "skills-dashboard" ? "active" : ""} onClick={() => setActiveView("skills-dashboard")}><span>▦</span>Team</button>
+          {session ? (
+            <button className={view === "skills-dashboard" ? "active" : ""} onClick={() => setActiveView("skills-dashboard")}><span>▦</span>{role === "mentee" ? "Mentors" : "Team"}</button>
           ) : null}
           {role === "director" ? (
             <button className={view === "admin" ? "active" : ""} onClick={() => setActiveView("admin")}><span>⚙</span>Admin</button>
