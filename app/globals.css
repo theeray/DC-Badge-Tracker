@@ -1978,6 +1978,10 @@ input:focus-visible {
 .tier-gold { background: var(--soft-orange); color: #985700; }
 
 .claim-status {
+  display: inline-flex;
+  min-height: 24px;
+  align-items: center;
+  gap: 5px;
   border: 1px solid var(--line);
   border-radius: 999px;
   color: var(--muted);
@@ -1986,6 +1990,29 @@ input:focus-visible {
   font-weight: 900;
   padding: 3px 6px;
   text-transform: uppercase;
+}
+
+.claim-picker {
+  position: relative;
+}
+
+.claim-picker > summary {
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+}
+
+.claim-picker > summary::-webkit-details-marker {
+  display: none;
+}
+
+.claim-picker > summary span {
+  font-size: 10px;
+  transition: transform 160ms ease;
+}
+
+.claim-picker[open] > summary span {
+  transform: rotate(180deg);
 }
 
 .claim-status.claim-silver {
@@ -2156,8 +2183,21 @@ input:focus-visible {
 
 .badge-claim-buttons {
   display: grid;
-  grid-template-columns: 1fr 1fr auto;
+  grid-template-columns: repeat(3, minmax(68px, 1fr));
   gap: 5px;
+}
+
+.claim-picker-menu {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 6px);
+  left: 0;
+  width: max-content;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: white;
+  box-shadow: 0 12px 28px rgba(15, 58, 51, 0.18);
+  padding: 7px;
 }
 
 .badge-claim-buttons button {
@@ -2176,6 +2216,17 @@ input:focus-visible {
   border-color: #9da6a6;
   background: #e4e8e8;
   color: #384040;
+}
+
+.badge-claim-buttons .pending.selected {
+  border-color: var(--mint);
+  background: var(--soft-green);
+  color: var(--green);
+}
+
+.badge-claim-buttons .pending:disabled {
+  cursor: default;
+  opacity: 1;
 }
 
 .badge-claim-buttons .gold.selected {
@@ -6031,6 +6082,13 @@ select:focus-visible {
 
   .skill-control-label {
     font-size: 12px;
+  }
+
+  .skill-meta .claim-status {
+    min-height: 44px;
+    font-size: 16px;
+    line-height: 1.15;
+    padding: 8px 12px;
   }
 
   .badge-claim-buttons button {

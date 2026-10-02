@@ -1261,7 +1261,54 @@ function TrackerWorkspace({
                     <article className={`skill-row status-${itemStatus}`} key={item.id}>
                       <div className="status-marker"><span>{itemStatus === "complete" ? "✓" : itemStatus === "ready" ? "◎" : itemStatus === "learning" ? "◐" : ""}</span></div>
                       <div className="skill-copy">
-                        <div className="skill-meta"><span>{query.trim() && item.area !== activeArea.id ? `${learningAreas.find((area) => area.id === item.area)?.shortName ?? item.area} · ${item.group}` : item.group}</span>{item.tier ? <em className={`tier tier-${item.tier.toLowerCase()}`}>Badge goal: {item.tier}</em> : null}<em className={`claim-status ${badgeStateClass}`}>{badgeStateLabel}</em></div>
+                        <div className="skill-meta">
+                          <span>{query.trim() && item.area !== activeArea.id ? `${learningAreas.find((area) => area.id === item.area)?.shortName ?? item.area} · ${item.group}` : item.group}</span>
+                          {item.tier ? <em className={`tier tier-${item.tier.toLowerCase()}`}>Badge goal: {item.tier}</em> : null}
+                          {isSelfTracking ? (
+                            <details className="claim-picker">
+                              <summary className={`claim-status ${badgeStateClass}`} aria-label={`Set your badge status for ${item.title}`}>
+                                {badgeStateLabel} <span aria-hidden="true">⌄</span>
+                              </summary>
+                              <div className="badge-claim-buttons claim-picker-menu" aria-label={`Self-report ${item.title} badge level`}>
+                                <button
+                                  type="button"
+                                  className={!selfReport ? "selected pending" : "pending"}
+                                  disabled={!selfReport}
+                                  onClick={(event) => {
+                                    event.currentTarget.closest("details")?.removeAttribute("open");
+                                    void clearSelfReportedBadge(item);
+                                  }}
+                                >
+                                  Pending
+                                </button>
+                                <button
+                                  type="button"
+                                  className={selfReport?.level === "Silver" ? "selected silver" : "silver"}
+                                  onClick={(event) => {
+                                    event.currentTarget.closest("details")?.removeAttribute("open");
+                                    void setSelfReportedBadge(item, "Silver");
+                                  }}
+                                  aria-pressed={selfReport?.level === "Silver"}
+                                >
+                                  Silver
+                                </button>
+                                <button
+                                  type="button"
+                                  className={selfReport?.level === "Gold" ? "selected gold" : "gold"}
+                                  onClick={(event) => {
+                                    event.currentTarget.closest("details")?.removeAttribute("open");
+                                    void setSelfReportedBadge(item, "Gold");
+                                  }}
+                                  aria-pressed={selfReport?.level === "Gold"}
+                                >
+                                  Gold
+                                </button>
+                              </div>
+                            </details>
+                          ) : (
+                            <em className={`claim-status ${badgeStateClass}`}>{badgeStateLabel}</em>
+                          )}
+                        </div>
                         <h3>{item.title}</h3>
                         <SkillResource item={item} />
                       </div>
@@ -1278,12 +1325,6 @@ function TrackerWorkspace({
                             <button className={`status-button status-${itemStatus}`} onClick={() => void advanceStatus(item)} title="Click to move to the next tutorial status">
                               <span>{statusLabels[itemStatus]}</span> <b>Change</b>
                             </button>
-                            <span className="skill-control-label">Self-report badge</span>
-                            <div className="badge-claim-buttons" aria-label={`Self-report ${item.title} badge level`}>
-                              <button type="button" className={selfReport?.level === "Silver" ? "selected silver" : "silver"} onClick={() => void setSelfReportedBadge(item, "Silver")} aria-pressed={selfReport?.level === "Silver"}>Silver</button>
-                              <button type="button" className={selfReport?.level === "Gold" ? "selected gold" : "gold"} onClick={() => void setSelfReportedBadge(item, "Gold")} aria-pressed={selfReport?.level === "Gold"}>Gold</button>
-                              {selfReport ? <button type="button" className="clear-claim" onClick={() => void clearSelfReportedBadge(item)}>Clear</button> : null}
-                            </div>
                           </div>
                         ) : role === "mentor" ? (
                           <div className="mentor-skill-actions">
