@@ -229,7 +229,7 @@ export default function SkillsDashboard({ session }: { session: AuthSession }) {
         const verifiedLevel: VerifiedLevel | null = manual
           ? manual.level
           : isMentorVerified
-            ? (skill.tier ?? "Endorsed")
+            ? (reported?.level ?? skill.tier ?? "Endorsed")
             : null;
         if (!reported && !verifiedLevel) continue;
         nextRows.push({

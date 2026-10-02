@@ -1914,7 +1914,7 @@ input:focus-visible {
 .skill-row {
   display: grid;
   min-height: 88px;
-  grid-template-columns: 42px minmax(240px, 1fr) minmax(145px, 0.45fr) 142px;
+  grid-template-columns: 42px minmax(220px, 1fr) minmax(125px, 0.35fr) minmax(154px, 220px);
   align-items: center;
   gap: 16px;
   border: 1px solid var(--line);
@@ -1953,6 +1953,7 @@ input:focus-visible {
 .skill-meta {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 7px;
 }
 
@@ -1975,6 +1976,35 @@ input:focus-visible {
 
 .tier-silver { background: #eceeee; color: #6a7070; }
 .tier-gold { background: var(--soft-orange); color: #985700; }
+
+.claim-status {
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--muted);
+  font-size: 7px;
+  font-style: normal;
+  font-weight: 900;
+  padding: 3px 6px;
+  text-transform: uppercase;
+}
+
+.claim-status.claim-silver {
+  border-color: #bfc5c5;
+  background: #f1f3f3;
+  color: #565d5d;
+}
+
+.claim-status.claim-gold {
+  border-color: #e5a43c;
+  background: var(--soft-orange);
+  color: #8b5100;
+}
+
+.claim-status.claim-verified {
+  border-color: var(--mint);
+  background: var(--soft-green);
+  color: var(--green);
+}
 
 .skill-copy h3 {
   margin: 4px 0 5px;
@@ -2055,6 +2085,18 @@ input:focus-visible {
   gap: 6px;
 }
 
+.self-skill-actions {
+  width: 220px;
+}
+
+.skill-control-label {
+  color: var(--muted);
+  font-size: 8px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
 .request-demo-button,
 .demo-requested-button {
   min-height: 34px;
@@ -2098,9 +2140,54 @@ input:focus-visible {
   padding: 0 10px;
 }
 
+.self-skill-actions .status-button {
+  width: 100%;
+}
+
+.status-button b {
+  font-size: 8px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
 .status-button.status-learning { border-color: var(--mint); background: var(--soft-green); color: var(--green); }
 .status-button.status-ready { border-color: #efca91; background: var(--soft-orange); color: #955600; }
 .status-button.status-complete { border-color: var(--green); background: var(--green); color: white; }
+
+.badge-claim-buttons {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap: 5px;
+}
+
+.badge-claim-buttons button {
+  min-height: 34px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: white;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 9px;
+  font-weight: 900;
+  padding: 0 9px;
+}
+
+.badge-claim-buttons .silver.selected {
+  border-color: #9da6a6;
+  background: #e4e8e8;
+  color: #384040;
+}
+
+.badge-claim-buttons .gold.selected {
+  border-color: #e5a43c;
+  background: var(--orange);
+  color: #173c35;
+}
+
+.badge-claim-buttons .clear-claim {
+  color: #934a3d;
+  padding-inline: 7px;
+}
 
 .empty-state {
   display: grid;
@@ -5941,6 +6028,19 @@ select:focus-visible {
   .clear-progress {
     font-size: 14px;
   }
+
+  .skill-control-label {
+    font-size: 12px;
+  }
+
+  .badge-claim-buttons button {
+    min-height: 44px;
+    font-size: 13px;
+  }
+
+  .status-button b {
+    font-size: 10px;
+  }
 }
 
 /* Readable desktop scale. The original interface was optimized too densely for
@@ -6304,7 +6404,7 @@ select:focus-visible {
 
   .skill-row {
     min-height: 110px;
-    grid-template-columns: 46px minmax(240px, 1fr) minmax(165px, 0.45fr) 158px;
+    grid-template-columns: 46px minmax(240px, 1fr) minmax(165px, 0.4fr) minmax(158px, 220px);
     padding: 15px 18px;
   }
 
@@ -6315,7 +6415,8 @@ select:focus-visible {
   }
 
   .skill-meta > span,
-  .tier {
+  .tier,
+  .claim-status {
     font-size: 11px;
   }
 
@@ -6340,6 +6441,19 @@ select:focus-visible {
     width: 154px;
     min-height: 44px;
     font-size: 13px;
+  }
+
+  .self-skill-actions .status-button {
+    width: 100%;
+  }
+
+  .skill-control-label {
+    font-size: 10px;
+  }
+
+  .badge-claim-buttons button {
+    min-height: 40px;
+    font-size: 12px;
   }
 
   .project-card-body h2 {

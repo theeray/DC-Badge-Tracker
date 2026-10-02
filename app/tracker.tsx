@@ -22,9 +22,12 @@ import {
   readableFirebaseError,
   removeDemonstrationRequest,
   removeEndorsement,
+  removeSelfReportedSkill,
   requestSkillDemonstration,
   restoreDemonstrationRequest,
+  restoreSelfReportedSkill,
   saveProgress,
+  saveSelfReportedSkill,
   signOutCurrentUser,
   watchAuthSession,
   watchDemonstrationRequests,
@@ -34,6 +37,7 @@ import {
   watchProgress,
   watchStudentWorkers,
   type AuthSession,
+  type CredentialLevel,
   type DemonstrationRequest,
   type Endorsement,
   type SelfReportedSkill,
@@ -759,6 +763,58 @@ function TrackerWorkspace({
     }
   };
 
+  const setSelfReportedBadge = async (
+    item: Skill,
+    level: CredentialLevel,
+  ) => {
+    if (!isSelfTracking || !session?.profile) return;
+    const existing = selfReportedSkills.find(
+      (report) => report.skillId === item.id,
+    );
+    if (existing?.level === level) return;
+    try {
+      const id = await saveSelfReportedSkill(
+        session.profile,
+        item.id,
+        level,
+        existing?.evidence ?? "",
+      );
+      setAnnouncement(
+        `${item.title} is now self-reported as ${level}. It remains unverified until a mentor or faculty director confirms it.`,
+      );
+      setUndoAction({
+        message: existing
+          ? `${item.title} changed to self-reported ${level}.`
+          : `${item.title} self-reported as ${level}.`,
+        run: existing
+          ? () => restoreSelfReportedSkill(existing)
+          : () => removeSelfReportedSkill(id),
+      });
+    } catch (error) {
+      setAnnouncement(readableFirebaseError(error));
+      setSyncState("error");
+    }
+  };
+
+  const clearSelfReportedBadge = async (item: Skill) => {
+    if (!isSelfTracking) return;
+    const existing = selfReportedSkills.find(
+      (report) => report.skillId === item.id,
+    );
+    if (!existing) return;
+    try {
+      await removeSelfReportedSkill(existing.id);
+      setAnnouncement(`The self-reported badge for ${item.title} was cleared.`);
+      setUndoAction({
+        message: `Self-reported ${existing.level} badge cleared from ${item.title}.`,
+        run: () => restoreSelfReportedSkill(existing),
+      });
+    } catch (error) {
+      setAnnouncement(readableFirebaseError(error));
+      setSyncState("error");
+    }
+  };
+
   const endorse = async (item: Skill) => {
     if (
       role !== "mentor" ||
@@ -1166,9 +1222,31 @@ function TrackerWorkspace({
                 {visibleSkills.map((item) => {
                   const itemStatus = statuses[item.id];
                   const isEndorsed = sessionEndorsed.includes(item.id);
-                  const hasSelfReport = selfReportedSkills.some(
+                  const selfReport = selfReportedSkills.find(
                     (report) => report.skillId === item.id,
                   );
+                  const hasSelfReport = Boolean(selfReport);
+                  const verifiedCredential = credentialRecords.find(
+                    (record) => record.skillId === item.id,
+                  );
+                  const hasEndorsement = endorsementRecords.some(
+                    (record) => record.skillId === item.id,
+                  );
+                  const badgeStateLabel = verifiedCredential
+                    ? `Faculty verified ${verifiedCredential.level}`
+                    : hasEndorsement
+                      ? selfReport
+                        ? `Endorsed ${selfReport.level}`
+                        : "Endorsed"
+                      : selfReport
+                        ? `Self-reported ${selfReport.level}`
+                        : "Badge pending";
+                  const badgeStateClass =
+                    verifiedCredential || hasEndorsement
+                      ? "claim-verified"
+                      : selfReport
+                        ? `claim-${selfReport.level.toLowerCase()}`
+                        : "claim-pending";
                   const canEndorse =
                     itemStatus === "ready" ||
                     itemStatus === "complete" ||
@@ -1183,7 +1261,7 @@ function TrackerWorkspace({
                     <article className={`skill-row status-${itemStatus}`} key={item.id}>
                       <div className="status-marker"><span>{itemStatus === "complete" ? "✓" : itemStatus === "ready" ? "◎" : itemStatus === "learning" ? "◐" : ""}</span></div>
                       <div className="skill-copy">
-                        <div className="skill-meta"><span>{query.trim() && item.area !== activeArea.id ? `${learningAreas.find((area) => area.id === item.area)?.shortName ?? item.area} · ${item.group}` : item.group}</span>{item.tier ? <em className={`tier tier-${item.tier.toLowerCase()}`}>{item.tier}</em> : null}</div>
+                        <div className="skill-meta"><span>{query.trim() && item.area !== activeArea.id ? `${learningAreas.find((area) => area.id === item.area)?.shortName ?? item.area} · ${item.group}` : item.group}</span>{item.tier ? <em className={`tier tier-${item.tier.toLowerCase()}`}>Badge goal: {item.tier}</em> : null}<em className={`claim-status ${badgeStateClass}`}>{badgeStateLabel}</em></div>
                         <h3>{item.title}</h3>
                         <SkillResource item={item} />
                       </div>
@@ -1196,9 +1274,16 @@ function TrackerWorkspace({
                                 Demo requested by {skillRequests.map((request) => request.mentorName).join(", ")}
                               </span>
                             ) : null}
-                            <button className={`status-button status-${itemStatus}`} onClick={() => void advanceStatus(item)} title="Click to move to the next status">
-                              {statusLabels[itemStatus]} <span>⌄</span>
+                            <span className="skill-control-label">Tutorial progress</span>
+                            <button className={`status-button status-${itemStatus}`} onClick={() => void advanceStatus(item)} title="Click to move to the next tutorial status">
+                              <span>{statusLabels[itemStatus]}</span> <b>Change</b>
                             </button>
+                            <span className="skill-control-label">Self-report badge</span>
+                            <div className="badge-claim-buttons" aria-label={`Self-report ${item.title} badge level`}>
+                              <button type="button" className={selfReport?.level === "Silver" ? "selected silver" : "silver"} onClick={() => void setSelfReportedBadge(item, "Silver")} aria-pressed={selfReport?.level === "Silver"}>Silver</button>
+                              <button type="button" className={selfReport?.level === "Gold" ? "selected gold" : "gold"} onClick={() => void setSelfReportedBadge(item, "Gold")} aria-pressed={selfReport?.level === "Gold"}>Gold</button>
+                              {selfReport ? <button type="button" className="clear-claim" onClick={() => void clearSelfReportedBadge(item)}>Clear</button> : null}
+                            </div>
                           </div>
                         ) : role === "mentor" ? (
                           <div className="mentor-skill-actions">
