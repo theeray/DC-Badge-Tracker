@@ -32,6 +32,8 @@ export default function AdminPanel({
   const [draft, setDraft] = useState<ApprovedUser>(emptyApproval);
   const [message, setMessage] = useState("");
   const [busyEmail, setBusyEmail] = useState("");
+  const [bulkRoster, setBulkRoster] = useState("");
+  const [bulkBusy, setBulkBusy] = useState(false);
   const [progressBackups, setProgressBackups] = useState<Set<string>>(new Set());
 
   useEffect(() => {
@@ -87,6 +89,42 @@ export default function AdminPanel({
     }
   };
 
+  const approveRoster = async (event: React.FormEvent) => {
+    event.preventDefault();
+    const parsed = bulkRoster
+      .split(/\r?\n/)
+      .map((line) => {
+        const [displayName = "", email = "", rawRole = "mentee"] = line
+          .split(/[\t,]/)
+          .map((value) => value.trim());
+        const role: AppRole =
+          rawRole.toLowerCase() === "mentor" ||
+          rawRole.toLowerCase() === "director"
+            ? (rawRole.toLowerCase() as AppRole)
+            : "mentee";
+        return { displayName, email: email.toLowerCase(), role, active: true };
+      })
+      .filter((item) => item.displayName && item.email.includes("@"));
+
+    if (!parsed.length) {
+      setMessage("Enter at least one line as Name, email, role.");
+      return;
+    }
+    setBulkBusy(true);
+    setMessage("");
+    try {
+      for (const member of parsed) {
+        await saveApprovedUser(member);
+      }
+      setBulkRoster("");
+      setMessage(`${parsed.length} approved member${parsed.length === 1 ? "" : "s"} added. They can now create their own passwords.`);
+    } catch (error) {
+      setMessage(readableFirebaseError(error));
+    } finally {
+      setBulkBusy(false);
+    }
+  };
+
   const resetProgress = async (profile: UserProfile) => {
     if (!window.confirm(`Back up and reset all saved progress for ${profile.displayName}? You can restore it afterward.`)) {
       return;
@@ -123,7 +161,7 @@ export default function AdminPanel({
           <span className="eyebrow">Faculty director controls</span>
           <h1>Accounts & records</h1>
           <p>
-            Approve institutional emails, assign roles, pause access, and manage
+            Approve member emails, assign roles, pause access, and manage
             mentee records. Members create and reset their own passwords.
           </p>
         </div>
@@ -136,7 +174,7 @@ export default function AdminPanel({
       <section className="admin-grid">
         <article className="admin-invite-card">
           <span className="eyebrow">Add approved member</span>
-          <h2>Approve an institutional email</h2>
+          <h2>Approve a member email</h2>
           <form onSubmit={addApproval}>
             <label>
               <span>Name</span>
@@ -153,7 +191,7 @@ export default function AdminPanel({
               />
             </label>
             <label>
-              <span>Institutional email</span>
+              <span>Approved email</span>
               <input
                 type="email"
                 value={draft.email}
@@ -188,7 +226,7 @@ export default function AdminPanel({
           </form>
           <p>
             Approval does not send a password. The member uses “Create
-            password,” verifies the institutional email, and activates the
+            password,” verifies the approved email, and activates the
             matching role automatically.
           </p>
         </article>
@@ -208,6 +246,32 @@ export default function AdminPanel({
             <span>active approvals</span>
           </div>
         </article>
+      </section>
+
+      <section className="admin-bulk-card">
+        <div>
+          <span className="eyebrow">Onboard a group</span>
+          <h2>Approve several members at once</h2>
+          <p>
+            Paste one person per line as <strong>Name, email, role</strong>.
+            Role may be mentee, mentor, or director; omitted roles default to mentee.
+          </p>
+        </div>
+        <form onSubmit={(event) => void approveRoster(event)}>
+          <label>
+            <span>Roster lines</span>
+            <textarea
+              value={bulkRoster}
+              onChange={(event) => setBulkRoster(event.target.value)}
+              placeholder={"Student Name, student@example.edu, mentee\nStudent Mentor, mentor@example.edu, mentor"}
+              rows={5}
+              required
+            />
+          </label>
+          <button className="primary-button" type="submit" disabled={bulkBusy || Boolean(busyEmail)}>
+            {bulkBusy ? "Adding roster…" : "Add approved roster"}
+          </button>
+        </form>
       </section>
 
       {message ? <p className="admin-message" role="status">{message}</p> : null}

@@ -152,6 +152,74 @@ service cloud.firestore {
         ]);
     }
 
+    function validMemberProfile(memberId) {
+      return request.resource.data.memberId == memberId
+        && exists(userPath(memberId))
+        && request.resource.data.displayName == get(userPath(memberId)).data.displayName
+        && request.resource.data.email == get(userPath(memberId)).data.email
+        && request.resource.data.phone is string
+        && request.resource.data.phone.size() <= 40
+        && request.resource.data.major is string
+        && request.resource.data.major.size() <= 160
+        && request.resource.data.graduationYear is string
+        && request.resource.data.graduationYear.size() <= 40
+        && request.resource.data.school is string
+        && request.resource.data.school.size() <= 120
+        && request.resource.data.hasUniform is bool
+        && request.resource.data.shirtSize is string
+        && request.resource.data.shirtSize.size() <= 20
+        && request.resource.data.preferredWeeklyHours is string
+        && request.resource.data.preferredWeeklyHours.size() <= 80
+        && request.resource.data.officeHours is string
+        && request.resource.data.officeHours.size() <= 500
+        && request.resource.data.workInterests is list
+        && request.resource.data.workInterests.size() <= 30
+        && request.resource.data.specialties is list
+        && request.resource.data.specialties.size() <= 30
+        && request.resource.data.socialMediaAreas is list
+        && request.resource.data.socialMediaAreas.size() <= 30
+        && request.resource.data.excitement is string
+        && request.resource.data.excitement.size() <= 1000
+        && request.resource.data.campaignIdeas is string
+        && request.resource.data.campaignIdeas.size() <= 1000
+        && request.resource.data.summerInterest in ['yes', 'no', 'maybe', 'unsure']
+        && request.resource.data.websiteBlurb is string
+        && request.resource.data.websiteBlurb.size() <= 1200
+        && request.resource.data.professionalLink is string
+        && request.resource.data.professionalLink.size() <= 500
+        && request.resource.data.favoriteProject is string
+        && request.resource.data.favoriteProject.size() <= 1000
+        && request.resource.data.funFacts is string
+        && request.resource.data.funFacts.size() <= 1000
+        && request.resource.data.createdAt is timestamp
+        && request.resource.data.updatedAt == request.time
+        && request.resource.data.keys().hasOnly([
+          'memberId',
+          'displayName',
+          'email',
+          'phone',
+          'major',
+          'graduationYear',
+          'school',
+          'hasUniform',
+          'shirtSize',
+          'preferredWeeklyHours',
+          'officeHours',
+          'workInterests',
+          'specialties',
+          'socialMediaAreas',
+          'excitement',
+          'campaignIdeas',
+          'summerInterest',
+          'websiteBlurb',
+          'professionalLink',
+          'favoriteProject',
+          'funFacts',
+          'createdAt',
+          'updatedAt'
+        ]);
+    }
+
     function approvedForSelf() {
       return verifiedEmail()
         && exists(approvalPath(request.auth.token.email))
@@ -195,6 +263,26 @@ service cloud.firestore {
           && request.resource.data.diff(resource.data).affectedKeys()
             .hasOnly(['displayName', 'updatedAt'])
           && request.resource.data.updatedAt == request.time);
+      allow delete: if isDirector();
+    }
+
+    match /memberProfiles/{memberId} {
+      allow get: if activeUser()
+        && (request.auth.uid == memberId || isMentor() || isDirector());
+      allow list: if isMentor() || isDirector();
+
+      allow create: if validMemberProfile(memberId)
+        && ((activeUser() && request.auth.uid == memberId)
+          || isDirector());
+
+      allow update: if validMemberProfile(memberId)
+        && request.resource.data.memberId == resource.data.memberId
+        && request.resource.data.displayName == resource.data.displayName
+        && request.resource.data.email == resource.data.email
+        && request.resource.data.createdAt == resource.data.createdAt
+        && ((activeUser() && request.auth.uid == memberId)
+          || isDirector());
+
       allow delete: if isDirector();
     }
 

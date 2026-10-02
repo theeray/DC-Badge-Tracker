@@ -4,7 +4,7 @@ The application uses Firebase Authentication, Cloud Firestore, and Firebase Host
 
 ## Account activation model
 
-1. A director creates an `approvedUsers/{email}` record with the person's name, institutional email, role, and `active: true`.
+1. A director creates an `approvedUsers/{email}` record with the person's name, approved email, role, and `active: true`. The app also supports a multiline roster paste for onboarding groups.
 2. The approved person creates their own password in the app.
 3. Firebase sends an email-verification link.
 4. After verification, the app creates `users/{uid}` from the approval record.
@@ -15,6 +15,7 @@ The application never stores passwords. Firebase Authentication handles password
 
 - `approvedUsers/{email}`: `displayName`, `email`, `role`, `active`, `updatedAt`
 - `users/{uid}`: `displayName`, `email`, `role`, `active`, `createdAt`, `updatedAt`
+- `memberProfiles/{uid}`: private beginning-of-year contact, program, availability, uniform, interest, specialty, and website fields entered by the member
 - `progress/{menteeUid}`: `ownerId`, `statuses`, `updatedAt`
 - `endorsements/{menteeUid_skillId_mentorUid}`: `menteeId`, `skillId`, `mentorId`, `mentorName`, `createdAt`
 - `timeEntries/{entryId}`: `workerId`, `workerName`, `startedAt`, `endedAt`, `note`, `createdAt`, `updatedAt`
@@ -27,6 +28,8 @@ Roles are `mentee`, `mentor`, and `director`.
 ## Security guarantees
 
 - A verified email and active profile are required for protected data.
+- Members can read and update only their own member profile. Mentors and directors can read the directory; mentors cannot edit another member's profile.
+- Directory CSV and email-group tools are shown only to mentors and directors.
 - Mentees can create and update only their own progress document.
 - Mentors can read mentee progress and create endorsements only for skills marked `ready` or `complete`.
 - Mentors cannot change progress and can delete only their own endorsements.
@@ -40,7 +43,7 @@ Roles are `mentee`, `mentor`, and `director`.
 
 ## Account continuity across hosting domains
 
-GitHub stores source code and Firebase Hosting serves the built app, but Firebase Authentication remains in this same Firebase project. Existing members do not create another account after the hosting move. They choose **Sign in** and use their existing institutional email and password. A one-time sign-in is expected on the new web address because browser sessions do not transfer between domains; verified-email status, role, progress, and endorsements remain intact.
+GitHub stores source code and Firebase Hosting serves the built app, but Firebase Authentication remains in this same Firebase project. Existing members do not create another account after the hosting move. They choose **Sign in** and use their existing approved email and password. A one-time sign-in is expected on the new web address because browser sessions do not transfer between domains; verified-email status, role, progress, and endorsements remain intact.
 
 Deploy `firestore.rules` and `firestore.indexes.json` before inviting pilot users.
 
@@ -56,5 +59,6 @@ Deploy `firestore.rules` and `firestore.indexes.json` before inviting pilot user
 8. Assign one tutorial as a mentor, update its status as the assignee, and confirm another mentor cannot edit the assignment.
 9. Self-report one Silver or Gold badge and confirm Team Skills labels it as self-reported until endorsement or faculty verification is present.
 10. Invite the remaining approved users only after the checks pass.
+11. Have one student save a member profile; confirm another student cannot read it while a mentor can filter it and export the matching CSV.
 
-Account names and institutional email addresses are live operational data and must not be committed to this public repository.
+Account names and email addresses are live operational data and must not be committed to this public repository.

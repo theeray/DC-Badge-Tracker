@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import AdminPanel from "./admin-panel";
 import AuthPanel from "./auth-panel";
 import MemberDevelopment from "./member-development";
+import OnboardingHub from "./onboarding-hub";
 import SkillsDashboard from "./skills-dashboard";
 import TimeTracker from "./time-tracker";
 import {
@@ -796,6 +797,9 @@ function TrackerWorkspace({
           <button className={view === "overview" ? "active" : ""} onClick={() => setActiveView("overview")}>
             <span className="nav-index">⌂</span><span>Overview</span>
           </button>
+          <button className={view === "new-hire-onboarding" ? "active" : ""} onClick={() => setActiveView("new-hire-onboarding")}>
+            <span className="nav-index">＋</span><span>New hire start</span>
+          </button>
           <button className={view === "projects" ? "active" : ""} onClick={() => setActiveView("projects")}>
             <span className="nav-index">◆</span><span>Practice projects</span><em>{projectBriefs.length}</em>
           </button>
@@ -814,7 +818,7 @@ function TrackerWorkspace({
           ) : null}
           {isReviewer ? (
             <button className={view === "skills-dashboard" ? "active" : ""} onClick={() => setActiveView("skills-dashboard")}>
-              <span className="nav-index">▦</span><span>Team skills</span>
+              <span className="nav-index">▦</span><span>Team directory</span>
             </button>
           ) : null}
           {role === "director" ? (
@@ -1002,6 +1006,10 @@ function TrackerWorkspace({
 
           {view === "admin" && role === "director" && session ? (
             <AdminPanel currentDirector={session.profile} />
+          ) : null}
+
+          {view === "new-hire-onboarding" ? (
+            <OnboardingHub session={session} onRequireSignIn={onRequireSignIn} />
           ) : null}
 
           {view === "time-clock" && session ? (
@@ -1323,6 +1331,7 @@ function TrackerWorkspace({
 
         <div className="mobile-nav" aria-label="Mobile navigation">
           <button className={view === "overview" ? "active" : ""} onClick={() => setActiveView("overview")}><span>⌂</span>Home</button>
+          <button className={view === "new-hire-onboarding" ? "active" : ""} onClick={() => setActiveView("new-hire-onboarding")}><span>＋</span>Start</button>
           <button className={learningAreas.some((area) => area.id === view) ? "active" : ""} onClick={() => setActiveView("onboarding")}><span>◫</span>Learn</button>
           <button className={view === "projects" ? "active" : ""} onClick={() => setActiveView("projects")}><span>◆</span>Projects</button>
           <button className={view === "brand-guides" ? "active" : ""} onClick={() => setActiveView("brand-guides")}><span>◈</span>Brand</button>

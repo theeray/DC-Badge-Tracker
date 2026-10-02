@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { allSkills, learningAreas, type Skill } from "./data";
+import MemberDirectory from "./member-directory";
 import {
   readableFirebaseError,
   removeSkillCredential,
@@ -319,6 +320,8 @@ export default function SkillsDashboard({ session }: { session: AuthSession }) {
         <article><span>Verified Silver people</span><strong>{verifiedSilverWorkers}</strong><small>confirmed for requested work</small></article>
         <article><span>Awaiting verification</span><strong>{unverifiedClaims}</strong><small>self-reported badge claims</small></article>
       </section>
+
+      <MemberDirectory session={session} />
 
       {isDirector ? (
         <section className="credential-editor" id="credential-editor">

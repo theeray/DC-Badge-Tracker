@@ -60,6 +60,32 @@ export type UserProfile = {
   active: boolean;
 };
 
+export type SummerInterest = "yes" | "no" | "maybe" | "unsure";
+
+export type MemberProfile = {
+  memberId: string;
+  displayName: string;
+  email: string;
+  phone: string;
+  major: string;
+  graduationYear: string;
+  school: string;
+  hasUniform: boolean;
+  shirtSize: string;
+  preferredWeeklyHours: string;
+  officeHours: string;
+  workInterests: string[];
+  specialties: string[];
+  socialMediaAreas: string[];
+  excitement: string;
+  campaignIdeas: string;
+  summerInterest: SummerInterest;
+  websiteBlurb: string;
+  professionalLink: string;
+  favoriteProject: string;
+  funFacts: string;
+};
+
 export type ApprovedUser = {
   email: string;
   displayName: string;
@@ -150,6 +176,46 @@ function profileFromDocument(uid: string, data: DocumentData): UserProfile {
   };
 }
 
+function stringList(value: unknown) {
+  return Array.isArray(value)
+    ? value.filter((item): item is string => typeof item === "string")
+    : [];
+}
+
+function memberProfileFromDocument(
+  memberId: string,
+  data: DocumentData,
+): MemberProfile {
+  return {
+    memberId,
+    displayName: String(data.displayName ?? "Digital Corps member"),
+    email: String(data.email ?? ""),
+    phone: String(data.phone ?? ""),
+    major: String(data.major ?? ""),
+    graduationYear: String(data.graduationYear ?? ""),
+    school: String(data.school ?? ""),
+    hasUniform: data.hasUniform === true,
+    shirtSize: String(data.shirtSize ?? ""),
+    preferredWeeklyHours: String(data.preferredWeeklyHours ?? ""),
+    officeHours: String(data.officeHours ?? ""),
+    workInterests: stringList(data.workInterests),
+    specialties: stringList(data.specialties),
+    socialMediaAreas: stringList(data.socialMediaAreas),
+    excitement: String(data.excitement ?? ""),
+    campaignIdeas: String(data.campaignIdeas ?? ""),
+    summerInterest:
+      data.summerInterest === "yes" ||
+      data.summerInterest === "no" ||
+      data.summerInterest === "maybe"
+        ? data.summerInterest
+        : "unsure",
+    websiteBlurb: String(data.websiteBlurb ?? ""),
+    professionalLink: String(data.professionalLink ?? ""),
+    favoriteProject: String(data.favoriteProject ?? ""),
+    funFacts: String(data.funFacts ?? ""),
+  };
+}
+
 export async function registerWithInstitutionalEmail(
   email: string,
   password: string,
@@ -182,7 +248,7 @@ export async function signInWithInstitutionalEmail(
       await sendEmailVerification(credential.user);
     } catch {
       message =
-        "Please verify your institutional email before signing in. If the verification message is not in your inbox, wait a moment and try signing in again to resend it.";
+        "Please verify your approved email before signing in. If the verification message is not in your inbox, wait a moment and try signing in again to resend it.";
     } finally {
       await signOut(auth);
     }
@@ -212,7 +278,7 @@ export async function signOutCurrentUser() {
 export async function ensureProfile(user: User): Promise<UserProfile> {
   const email = normalizeEmail(user.email ?? "");
   if (!email || !user.emailVerified) {
-    throw new Error("A verified institutional email is required.");
+    throw new Error("A verified approved email is required.");
   }
 
   const profileReference = doc(db, "users", user.uid);
@@ -436,6 +502,56 @@ export function watchAllUsers(
       ),
     (error) => onError(readableFirebaseError(error)),
   );
+}
+
+export function watchMemberProfile(
+  memberId: string,
+  onChange: (profile: MemberProfile | null) => void,
+  onError: (message: string) => void,
+) {
+  return onSnapshot(
+    doc(db, "memberProfiles", memberId),
+    (snapshot) =>
+      onChange(
+        snapshot.exists()
+          ? memberProfileFromDocument(snapshot.id, snapshot.data())
+          : null,
+      ),
+    (error) => onError(readableFirebaseError(error)),
+  );
+}
+
+export function watchAllMemberProfiles(
+  onChange: (profiles: MemberProfile[]) => void,
+  onError: (message: string) => void,
+) {
+  return onSnapshot(
+    collection(db, "memberProfiles"),
+    (snapshot) =>
+      onChange(
+        snapshot.docs
+          .map((item) => memberProfileFromDocument(item.id, item.data()))
+          .sort((a, b) => a.displayName.localeCompare(b.displayName)),
+      ),
+    (error) => onError(readableFirebaseError(error)),
+  );
+}
+
+export async function saveMemberProfile(
+  member: UserProfile,
+  profile: Omit<MemberProfile, "memberId" | "displayName" | "email">,
+) {
+  const reference = doc(db, "memberProfiles", member.uid);
+  const existing = await getDoc(reference);
+  const payload = {
+    memberId: member.uid,
+    displayName: member.displayName,
+    email: member.email,
+    ...profile,
+    updatedAt: serverTimestamp(),
+    ...(existing.exists() ? {} : { createdAt: serverTimestamp() }),
+  };
+  await setDoc(reference, payload, { merge: true });
 }
 
 export async function saveApprovedUser(user: ApprovedUser) {
@@ -871,7 +987,7 @@ export function readableFirebaseError(error: unknown) {
     "auth/email-already-in-use":
       "An account already exists for that email. Use Sign in or Reset password.",
     "auth/invalid-credential": "The email or password is incorrect.",
-    "auth/invalid-email": "Enter a valid institutional email address.",
+    "auth/invalid-email": "Enter a valid approved email address.",
     "auth/too-many-requests":
       "Firebase temporarily paused sign-in attempts. Please wait a few minutes.",
     "auth/weak-password": "Use a password with at least six characters.",

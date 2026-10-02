@@ -1,5 +1,14 @@
 {
   "projects": {
     "default": "digital-corps-badge-tracker"
+  },
+  "targets": {
+    "digital-corps-badge-tracker": {
+      "hosting": {
+        "short": [
+          "dc-badges"
+        ]
+      }
+    }
   }
 }

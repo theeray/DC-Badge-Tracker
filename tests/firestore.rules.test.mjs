@@ -59,6 +59,35 @@ function authenticated(identity) {
   }).firestore();
 }
 
+function memberProfile(identity, overrides = {}) {
+  return {
+    memberId: identity.uid,
+    displayName: identity.displayName,
+    email: identity.email,
+    phone: "218-555-0100",
+    major: "Graphic Design",
+    graduationYear: "2028",
+    school: "Technology, Art & Design",
+    hasUniform: true,
+    shirtSize: "M",
+    preferredWeeklyHours: "5–10",
+    officeHours: "Mon/Wed 12–2 in BN 219",
+    workInterests: ["Graphic design", "Photography"],
+    specialties: ["Illustrator"],
+    socialMediaAreas: ["Music"],
+    excitement: "Client projects",
+    campaignIdeas: "Student spotlights",
+    summerInterest: "maybe",
+    websiteBlurb: "Student designer and Digital Corps member.",
+    professionalLink: "https://example.com/portfolio",
+    favoriteProject: "",
+    funFacts: "",
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+    ...overrides,
+  };
+}
+
 before(async () => {
   environment = await initializeTestEnvironment({
     projectId,
@@ -512,4 +541,45 @@ test("a member cannot promote their own role", async () => {
     }),
   );
   assert.equal(true, true);
+});
+
+test("members manage only their own directory profile while staff can filter the roster", async () => {
+  const menteeDb = authenticated(identities.mentee);
+  const mentorDb = authenticated(identities.mentor);
+  const directorDb = authenticated(identities.director);
+
+  await assertSucceeds(
+    setDoc(
+      doc(menteeDb, "memberProfiles", identities.mentee.uid),
+      memberProfile(identities.mentee),
+    ),
+  );
+  await assertSucceeds(
+    updateDoc(doc(menteeDb, "memberProfiles", identities.mentee.uid), {
+      workInterests: ["Graphic design", "Motion graphics"],
+      updatedAt: serverTimestamp(),
+    }),
+  );
+  await assertFails(
+    getDoc(doc(menteeDb, "memberProfiles", identities.mentor.uid)),
+  );
+  await assertFails(
+    setDoc(
+      doc(menteeDb, "memberProfiles", identities.mentor.uid),
+      memberProfile(identities.mentor),
+    ),
+  );
+  await assertSucceeds(getDocs(collection(mentorDb, "memberProfiles")));
+  await assertFails(
+    updateDoc(doc(mentorDb, "memberProfiles", identities.mentee.uid), {
+      major: "Changed by mentor",
+      updatedAt: serverTimestamp(),
+    }),
+  );
+  await assertSucceeds(
+    updateDoc(doc(directorDb, "memberProfiles", identities.mentee.uid), {
+      major: "Design and Communication",
+      updatedAt: serverTimestamp(),
+    }),
+  );
 });

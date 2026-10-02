@@ -34,7 +34,7 @@ export default function AuthPanel({
         setMode("sign-in");
         setPassword("");
         setMessage(
-          "Verification sent. Open the message in your institutional inbox, verify the address, then return here to sign in.",
+          "Verification sent. Open the message in your inbox (including junk), verify the address, then return here to sign in.",
         );
       } else {
         await signInWithInstitutionalEmail(email, password);
@@ -48,7 +48,7 @@ export default function AuthPanel({
 
   const resetPassword = async () => {
     if (!email.trim()) {
-      setMessage("Enter your institutional email first, then choose Reset password.");
+      setMessage("Enter your approved email first, then choose Reset password.");
       return;
     }
     setBusy(true);
@@ -119,8 +119,8 @@ export default function AuthPanel({
           </h2>
           <p>
             {mode === "sign-in"
-              ? "Use the institutional email and password you created for this app."
-              : "Use your approved institutional email and choose your own password. This does not use MinnState or Outlook sign-in."}
+              ? "Use the approved email and password you created for this app."
+              : "Use the email approved by a faculty director and choose your own password. This does not use MinnState or Outlook sign-in."}
           </p>
         </div>
 
@@ -138,7 +138,7 @@ export default function AuthPanel({
             </label>
           ) : null}
           <label>
-            <span>Institutional email</span>
+            <span>Approved email</span>
             <input
               type="email"
               autoComplete="username"
