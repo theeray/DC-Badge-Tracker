@@ -126,14 +126,14 @@ export default function AdminPanel({
   };
 
   const resetProgress = async (profile: UserProfile) => {
-    if (!window.confirm(`Back up and reset all saved progress for ${profile.displayName}? You can restore it afterward.`)) {
+    if (!window.confirm(`Reset all saved tutorial progress for ${profile.displayName}? A restorable backup will be created first.`)) {
       return;
     }
     setBusyEmail(profile.email);
     setMessage("");
     try {
       await resetMenteeProgress(profile.uid);
-      setMessage(`${profile.displayName}'s progress was backed up and reset.`);
+      setMessage(`${profile.displayName}'s tutorial progress was backed up and reset.`);
     } catch (error) {
       setMessage(readableFirebaseError(error));
     } finally {
@@ -146,7 +146,7 @@ export default function AdminPanel({
     setMessage("");
     try {
       await restoreMenteeProgress(profile.uid);
-      setMessage(`${profile.displayName}'s previous progress was restored.`);
+      setMessage(`${profile.displayName}'s previous tutorial progress was restored.`);
     } catch (error) {
       setMessage(readableFirebaseError(error));
     } finally {
@@ -355,8 +355,8 @@ export default function AdminPanel({
                           }
                         >
                           {progressBackups.has(profile.uid)
-                            ? "Restore progress"
-                            : "Back up & reset"}
+                            ? "Restore tutorial progress"
+                            : "Reset tutorial progress (reversible)"}
                         </button>
                       ) : (
                         <span>—</span>

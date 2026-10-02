@@ -20,6 +20,7 @@ import {
   watchMemberSkillCredentials,
   watchMentorDemonstrationRequests,
   watchMentors,
+  watchProgress,
   watchSelfReportedSkills,
   watchSkillCredentials,
   type AuthSession,
@@ -105,17 +106,18 @@ export default function SkillsDashboard({ session }: { session: AuthSession }) {
           : (activeWorkers[0]?.uid ?? ""),
       );
     }, reportError);
-    const stopProgress = watchAllProgress(setProgress, reportError);
-    const stopEndorsements = watchAllEndorsements(setEndorsements, reportError);
-    const stopCredentials = watchSkillCredentials(
-      setManualCredentials,
-      reportError,
-    );
-    const stopReports = watchSelfReportedSkills(
-      session.profile,
-      setSelfReports,
-      reportError,
-    );
+    const stopProgress = isDirector
+      ? watchAllProgress(setProgress, reportError)
+      : () => undefined;
+    const stopEndorsements = isDirector
+      ? watchAllEndorsements(setEndorsements, reportError)
+      : () => undefined;
+    const stopCredentials = isDirector
+      ? watchSkillCredentials(setManualCredentials, reportError)
+      : () => undefined;
+    const stopReports = isDirector
+      ? watchSelfReportedSkills(session.profile, setSelfReports, reportError)
+      : () => undefined;
     const stopRequests = isMentor
       ? watchMentorDemonstrationRequests(
           session.profile.uid,
@@ -131,16 +133,23 @@ export default function SkillsDashboard({ session }: { session: AuthSession }) {
       stopReports();
       stopRequests();
     };
-  }, [isMentee, isMentor, session.profile]);
+  }, [isDirector, isMentee, isMentor, session.profile]);
 
-  const mentorIdsKey = workers.map((worker) => worker.uid).join("|");
+  const memberIdsKey = workers.map((worker) => worker.uid).join("|");
 
   useEffect(() => {
-    if (!isMentee) return;
+    if (isDirector) return;
     const reportError = (error: string) => setMessage(error);
+    setProgress({});
+    setSelfReports([]);
+    setManualCredentials([]);
+    setEndorsements([]);
+    const progressSlices = new Map<string, ProgressRecord>();
     const reportSlices = new Map<string, SelfReportedSkill[]>();
     const credentialSlices = new Map<string, SkillCredential[]>();
     const endorsementSlices = new Map<string, Endorsement[]>();
+    const publishProgress = () =>
+      setProgress(Object.fromEntries(progressSlices));
     const publishReports = () =>
       setSelfReports(Array.from(reportSlices.values()).flat());
     const publishCredentials = () =>
@@ -148,6 +157,17 @@ export default function SkillsDashboard({ session }: { session: AuthSession }) {
     const publishEndorsements = () =>
       setEndorsements(Array.from(endorsementSlices.values()).flat());
     const stops = workers.flatMap((worker) => [
+      watchProgress(
+        worker.uid,
+        (statuses) => {
+          progressSlices.set(worker.uid, {
+            ownerId: worker.uid,
+            statuses,
+          });
+          publishProgress();
+        },
+        reportError,
+      ),
       watchMemberSelfReportedSkills(
         worker.uid,
         (items) => {
@@ -173,13 +193,8 @@ export default function SkillsDashboard({ session }: { session: AuthSession }) {
         reportError,
       ),
     ]);
-    if (!workers.length) {
-      setSelfReports([]);
-      setManualCredentials([]);
-      setEndorsements([]);
-    }
     return () => stops.forEach((stop) => stop());
-  }, [isMentee, mentorIdsKey]);
+  }, [isDirector, memberIdsKey]);
 
   const rows = useMemo(() => {
     const manualByKey = new Map(

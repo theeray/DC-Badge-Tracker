@@ -30,14 +30,14 @@ Roles are `mentee`, `mentor`, and `director`.
 - A verified email and active profile are required for protected data.
 - Members can read and update only their own member profile. Mentors and directors can read the directory; mentors cannot edit another member's profile.
 - Directory CSV and email-group tools are shown only to mentors and directors.
-- Mentees can create and update only their own progress document.
+- Student mentors and mentees can create and update only their own progress document. Directors may also maintain a private test-progress record.
 - Mentors can read mentee progress and create endorsements only for skills marked `ready` or `complete`.
 - Mentors cannot change progress and can delete only their own endorsements.
 - Student mentors and mentees can create, correct, and remove only their own time entries.
 - Directors can review and correct all time entries.
 - Mentors can read the team skills dashboard; directors can also assign or correct Gold and Silver statuses.
 - Mentors and directors can assign skills or tutorials to active student workers. Mentors manage only assignments they created; assignees manage only assignment status; directors can correct any assignment.
-- Student workers can create, edit, and remove only their own Silver and Gold self-reports. Self-reports remain visibly distinct from mentor endorsements and faculty verification.
+- Student workers can create, edit, and remove only their own Silver and Gold self-reports. Directors may create private test claims; mentor and mentee accounts cannot read faculty test progress or claims. Self-reports remain visibly distinct from mentor endorsements and faculty verification.
 - Directors manage approvals, profiles, progress, endorsements, time entries, and skill credentials.
 - User roles cannot be self-promoted.
 
@@ -60,5 +60,6 @@ Deploy `firestore.rules` and `firestore.indexes.json` before inviting pilot user
 9. Self-report one Silver or Gold badge and confirm Team Skills labels it as self-reported until endorsement or faculty verification is present.
 10. Invite the remaining approved users only after the checks pass.
 11. Have one student save a member profile; confirm another student cannot read it while a mentor can filter it and export the matching CSV.
+12. Add faculty test progress and a faculty test badge; confirm neither record is readable from mentor or mentee accounts.
 
 Account names and email addresses are live operational data and must not be committed to this public repository.

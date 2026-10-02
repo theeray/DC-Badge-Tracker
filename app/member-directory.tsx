@@ -7,6 +7,9 @@ import {
   watchAllMemberProfiles,
   watchAllProgress,
   watchAllUsers,
+  watchMemberSelfReportedSkills,
+  watchMemberSkillCredentials,
+  watchProgress,
   watchSelfReportedSkills,
   watchSkillCredentials,
   type AuthSession,
@@ -55,6 +58,7 @@ function skillNames(ids: string[]) {
 }
 
 export default function MemberDirectory({ session }: { session: AuthSession }) {
+  const isDirector = session.profile.role === "director";
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [profiles, setProfiles] = useState<MemberProfile[]>([]);
   const [progress, setProgress] = useState<Record<string, ProgressRecord>>({});
@@ -72,10 +76,16 @@ export default function MemberDirectory({ session }: { session: AuthSession }) {
     const reportError = (error: string) => setMessage(error);
     const stopUsers = watchAllUsers(setUsers, reportError);
     const stopProfiles = watchAllMemberProfiles(setProfiles, reportError);
-    const stopProgress = watchAllProgress(setProgress, reportError);
+    const stopProgress = isDirector
+      ? watchAllProgress(setProgress, reportError)
+      : () => undefined;
     const stopEndorsements = watchAllEndorsements(setEndorsements, reportError);
-    const stopCredentials = watchSkillCredentials(setCredentials, reportError);
-    const stopReports = watchSelfReportedSkills(session.profile, setSelfReports, reportError);
+    const stopCredentials = isDirector
+      ? watchSkillCredentials(setCredentials, reportError)
+      : () => undefined;
+    const stopReports = isDirector
+      ? watchSelfReportedSkills(session.profile, setSelfReports, reportError)
+      : () => undefined;
     return () => {
       stopUsers();
       stopProfiles();
@@ -84,7 +94,62 @@ export default function MemberDirectory({ session }: { session: AuthSession }) {
       stopCredentials();
       stopReports();
     };
-  }, [session.profile]);
+  }, [isDirector, session.profile]);
+
+  const workerIdsKey = users
+    .filter((user) => user.active && user.role !== "director")
+    .map((user) => user.uid)
+    .join("|");
+
+  useEffect(() => {
+    if (isDirector) return;
+    const workers = users.filter(
+      (user) => user.active && user.role !== "director",
+    );
+    const reportError = (error: string) => setMessage(error);
+    setProgress({});
+    setCredentials([]);
+    setSelfReports([]);
+    const progressSlices = new Map<string, ProgressRecord>();
+    const credentialSlices = new Map<string, SkillCredential[]>();
+    const reportSlices = new Map<string, SelfReportedSkill[]>();
+    const publishProgress = () =>
+      setProgress(Object.fromEntries(progressSlices));
+    const publishCredentials = () =>
+      setCredentials(Array.from(credentialSlices.values()).flat());
+    const publishReports = () =>
+      setSelfReports(Array.from(reportSlices.values()).flat());
+    const stops = workers.flatMap((worker) => [
+      watchProgress(
+        worker.uid,
+        (statuses) => {
+          progressSlices.set(worker.uid, {
+            ownerId: worker.uid,
+            statuses,
+          });
+          publishProgress();
+        },
+        reportError,
+      ),
+      watchMemberSkillCredentials(
+        worker.uid,
+        (items) => {
+          credentialSlices.set(worker.uid, items);
+          publishCredentials();
+        },
+        reportError,
+      ),
+      watchMemberSelfReportedSkills(
+        worker.uid,
+        (items) => {
+          reportSlices.set(worker.uid, items);
+          publishReports();
+        },
+        reportError,
+      ),
+    ]);
+    return () => stops.forEach((stop) => stop());
+  }, [isDirector, workerIdsKey]);
 
   const rows = useMemo(() => {
     const profileById = new Map(profiles.map((profile) => [profile.memberId, profile]));

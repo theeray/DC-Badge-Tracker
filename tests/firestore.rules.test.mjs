@@ -169,6 +169,50 @@ test("mentors track their own progress without altering another member", async (
   );
 });
 
+test("faculty directors can privately test progress and self-reported badges", async () => {
+  const directorDb = authenticated(identities.director);
+  const mentorDb = authenticated(identities.mentor);
+  const menteeDb = authenticated(identities.mentee);
+  const reportId = `${identities.director.uid}_private-test-skill`;
+
+  await assertSucceeds(
+    setDoc(doc(directorDb, "progress", identities.director.uid), {
+      ownerId: identities.director.uid,
+      statuses: { "private-test-skill": "complete" },
+      updatedAt: serverTimestamp(),
+    }),
+  );
+  await assertSucceeds(
+    setDoc(doc(directorDb, "selfReportedSkills", reportId), {
+      memberId: identities.director.uid,
+      memberName: identities.director.displayName,
+      skillId: "private-test-skill",
+      level: "Gold",
+      evidence: "Private faculty workflow test",
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    }),
+  );
+  await assertSucceeds(
+    getDoc(doc(directorDb, "progress", identities.director.uid)),
+  );
+  await assertSucceeds(
+    getDoc(doc(directorDb, "selfReportedSkills", reportId)),
+  );
+  await assertFails(
+    getDoc(doc(mentorDb, "progress", identities.director.uid)),
+  );
+  await assertFails(
+    getDoc(doc(menteeDb, "progress", identities.director.uid)),
+  );
+  await assertFails(
+    getDoc(doc(mentorDb, "selfReportedSkills", reportId)),
+  );
+  await assertFails(
+    getDoc(doc(menteeDb, "selfReportedSkills", reportId)),
+  );
+});
+
 test("mentor can read progress and endorse a ready skill", async () => {
   const mentorDb = authenticated(identities.mentor);
   await assertSucceeds(

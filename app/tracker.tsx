@@ -266,16 +266,20 @@ function AssetLibrary({ title, description, assets }: { title: string; descripti
 }
 
 function SkillResource({ item }: { item: Skill }) {
+  if (item.internal && item.href) {
+    return (
+      <a className="resource-link" href={item.href} target="_blank" rel="noreferrer">
+        Open Teams resource <ExternalArrow />
+      </a>
+    );
+  }
+
   if (item.href) {
     return (
       <a className="resource-link" href={item.href} target="_blank" rel="noreferrer">
         Open tutorial <ExternalArrow />
       </a>
     );
-  }
-
-  if (item.internal) {
-    return <span className="resource-note">Internal Teams resource</span>;
   }
 
   return <span className="resource-note">Practice activity</span>;
@@ -548,7 +552,7 @@ function TrackerWorkspace({
       (nextMentees) => {
         setMentees(nextMentees);
         setSelectedMenteeId((current) =>
-          role === "mentor" && current === SELF_TRACKING_ID
+          (role === "mentor" || role === "director") && current === SELF_TRACKING_ID
             ? current
             : current && nextMentees.some((item) => item.uid === current)
             ? current
@@ -566,12 +570,14 @@ function TrackerWorkspace({
 
   const targetMenteeId =
     role === "mentee" ||
-    (role === "mentor" && selectedMenteeId === SELF_TRACKING_ID)
+    ((role === "mentor" || role === "director") &&
+      selectedMenteeId === SELF_TRACKING_ID)
       ? (session?.profile.uid ?? "")
       : selectedMenteeId;
   const selectedMentee =
     role === "mentee" ||
-    (role === "mentor" && selectedMenteeId === SELF_TRACKING_ID)
+    ((role === "mentor" || role === "director") &&
+      selectedMenteeId === SELF_TRACKING_ID)
       ? session?.profile
       : mentees.find((item) => item.uid === targetMenteeId);
   const isSelfTracking =
@@ -944,15 +950,16 @@ function TrackerWorkspace({
           </button>
           {isReviewer ? (
             <label className="mentee-picker">
-              <span>{role === "mentor" && isSelfTracking ? "Tracking" : "Reviewing"}</span>
+              <span>{isSelfTracking ? "Tracking" : "Reviewing"}</span>
               <select
                 value={selectedMenteeId}
                 onChange={(event) => setSelectedMenteeId(event.target.value)}
-                disabled={role === "director" && !mentees.length}
                 aria-label="Choose your badges or a student member to review"
               >
-                {role === "mentor" ? (
-                  <option value={SELF_TRACKING_ID}>My badges &amp; tutorials</option>
+                {role === "mentor" || role === "director" ? (
+                  <option value={SELF_TRACKING_ID}>
+                    {role === "director" ? "My private test badges & tutorials" : "My badges & tutorials"}
+                  </option>
                 ) : null}
                 {role === "director" && !mentees.length ? <option value="">No activated student members</option> : null}
                 {mentees.map((mentee) => (

@@ -22,13 +22,23 @@ export type LearningArea = {
   skills: Skill[];
 };
 
+export const INTERNAL_TEAMS_RESOURCE_URL =
+  "https://teams.microsoft.com/l/team/19%3AUIhQN2iqNSIljAAW6JJ4gZdbWgH-Pnxr4cr8upXezsk1%40thread.tacv2/conversations?groupId=e4fbc62c-f4bd-487d-85c5-ec9f5f24bce0&tenantId=5011c7c6-0ab4-46ab-9ef4-fae74a921a7f";
+
 const skill = (
   area: string,
   group: string,
   id: string,
   title: string,
   extra: Omit<Skill, "area" | "group" | "id" | "title"> = {},
-): Skill => ({ area, group, id, title, ...extra });
+): Skill => ({
+  area,
+  group,
+  id,
+  title,
+  ...extra,
+  ...(extra.internal && !extra.href ? { href: INTERNAL_TEAMS_RESOURCE_URL } : {}),
+});
 
 const ONBOARDING = "onboarding";
 const CONTENT = "content-creation";

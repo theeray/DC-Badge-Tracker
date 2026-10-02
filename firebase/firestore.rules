@@ -138,7 +138,7 @@ service cloud.firestore {
         && request.resource.data.memberName is string
         && exists(userPath(request.resource.data.memberId))
         && get(userPath(request.resource.data.memberId)).data.active == true
-        && get(userPath(request.resource.data.memberId)).data.role in ['mentee', 'mentor']
+        && get(userPath(request.resource.data.memberId)).data.role in ['mentee', 'mentor', 'director']
         && request.resource.data.skillId is string
         && request.resource.data.level in ['Silver', 'Gold']
         && request.resource.data.evidence is string
@@ -317,7 +317,12 @@ service cloud.firestore {
 
     match /progress/{menteeId} {
       allow read: if activeUser()
-        && (request.auth.uid == menteeId || isMentor() || isDirector());
+        && (request.auth.uid == menteeId
+          || isDirector()
+          || (isMentor()
+            && exists(userPath(menteeId))
+            && get(userPath(menteeId)).data.active == true
+            && get(userPath(menteeId)).data.role in ['mentee', 'mentor']));
 
       allow create, update: if isDirector()
         || (isStudentWorker()
@@ -404,9 +409,12 @@ service cloud.firestore {
 
     match /skillCredentials/{credentialId} {
       allow read: if activeUser()
-        && (isMentor()
-          || isDirector()
+        && (isDirector()
           || resource.data.workerId == request.auth.uid
+          || (isMentor()
+            && exists(userPath(resource.data.workerId))
+            && get(userPath(resource.data.workerId)).data.active == true
+            && get(userPath(resource.data.workerId)).data.role in ['mentee', 'mentor'])
           || (isMentee()
             && exists(userPath(resource.data.workerId))
             && get(userPath(resource.data.workerId)).data.active == true
@@ -459,9 +467,12 @@ service cloud.firestore {
 
     match /selfReportedSkills/{reportId} {
       allow read: if activeUser()
-        && (isMentor()
-          || isDirector()
+        && (isDirector()
           || resource.data.memberId == request.auth.uid
+          || (isMentor()
+            && exists(userPath(resource.data.memberId))
+            && get(userPath(resource.data.memberId)).data.active == true
+            && get(userPath(resource.data.memberId)).data.role in ['mentee', 'mentor'])
           || (isMentee()
             && exists(userPath(resource.data.memberId))
             && get(userPath(resource.data.memberId)).data.active == true

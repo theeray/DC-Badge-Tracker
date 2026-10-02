@@ -14,8 +14,8 @@ import {
   updateSkillAssignmentStatus,
   watchAllUsers,
   watchEndorsements,
+  watchMemberSelfReportedSkills,
   watchMemberSkillCredentials,
-  watchSelfReportedSkills,
   watchSkillAssignments,
   type AssignmentStatus,
   type AuthSession,
@@ -44,8 +44,8 @@ function skillAreaName(skill: Skill) {
 }
 
 function skillResourceLabel(skill: Skill) {
+  if (skill.internal) return "Open Teams resource ↗";
   if (skill.href) return "Open tutorial ↗";
-  if (skill.internal) return "Open learning path →";
   return "Open skill →";
 }
 
@@ -58,7 +58,7 @@ export default function MemberDevelopment({
 }) {
   const profile = session.profile;
   const canAssign = profile.role === "mentor" || profile.role === "director";
-  const canSelfReport = profile.role !== "director";
+  const canSelfReport = true;
   const [workers, setWorkers] = useState<UserProfile[]>(
     canAssign ? [] : [profile],
   );
@@ -104,8 +104,8 @@ export default function MemberDevelopment({
       setAssignments,
       reportError,
     );
-    const stopReports = watchSelfReportedSkills(
-      profile,
+    const stopReports = watchMemberSelfReportedSkills(
+      profile.uid,
       setSelfReports,
       reportError,
     );
@@ -342,7 +342,7 @@ export default function MemberDevelopment({
           <h1>Assign learning. Show growing skills.</h1>
           <p>
             Mentors and faculty directors can assign any tutorial or skill to an
-            active student member. Student workers can self-report Silver or Gold
+            active student member. Members can self-report Silver or Gold
             experience without presenting it as verified.
           </p>
         </div>
@@ -552,12 +552,12 @@ export default function MemberDevelopment({
       {canSelfReport ? (
         <section className="self-report-layout">
           <div className="self-report-editor" id="self-report-editor">
-            <span className="eyebrow">Your experience</span>
-            <h2>Self-report a Silver or Gold badge</h2>
+            <span className="eyebrow">{profile.role === "director" ? "Private faculty testing" : "Your experience"}</span>
+            <h2>{profile.role === "director" ? "Test a Silver or Gold badge" : "Self-report a Silver or Gold badge"}</h2>
             <p>
-              Silver means you can do the work. Gold means you can train someone
-              else. Your claim appears in Team Skills immediately as
-              self-reported—not verified—until staff evidence is added.
+              {profile.role === "director"
+                ? "Use this to test the badge workflow with your own account. Faculty test claims remain visible only to faculty directors and never appear in mentor or mentee searches."
+                : "Silver means you can do the work. Gold means you can train someone else. Your claim appears in Team Skills immediately as self-reported—not verified—until staff evidence is added."}
             </p>
             <form onSubmit={(event) => void submitSelfReport(event)}>
               <label>
