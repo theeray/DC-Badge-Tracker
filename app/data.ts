@@ -50,8 +50,6 @@ export const learningAreas: LearningArea[] = [
       skill(ONBOARDING, "Training & Skill Building", "on-planner", "Use MS Teams Planner", { href: "https://youtu.be/r3dpzqttDuA", initialStatus: "complete", initialEndorsements: 1 }),
       skill(ONBOARDING, "Training & Skill Building", "on-badge", "Use a Badge Card", { href: "https://www.iorad.com/player/2482475/How-to-use-a-TAD-Badge-Card", initialStatus: "complete", initialEndorsements: 2 }),
       skill(ONBOARDING, "Training & Skill Building", "on-hours", "Enter Submitted Payroll Hours", { href: "/resources/onboarding/enter-work-hours-steps.docx", searchTerms: ["e-services", "student employment", "timesheet"], initialStatus: "learning" }),
-      skill(ONBOARDING, "Training & Skill Building", "on-paymo", "Track Hours with Paymo", { href: "https://youtu.be/Ft_pWKbmOwo?si=izRyzc-S_ZPfUWuR", initialStatus: "ready" }),
-
       skill(ONBOARDING, "Client Relations", "on-primary", "How to Make Primary Contact", { href: "https://www.iorad.com/player/2433316/Social-Media-Campaign-1--How-to-Make-First-Contact", initialStatus: "complete", initialEndorsements: 2 }),
       skill(ONBOARDING, "Client Relations", "on-meeting", "Client Meeting Checklist", { href: "/resources/onboarding/client-meeting-checklist.docx", initialStatus: "learning" }),
       skill(ONBOARDING, "Client Relations", "on-brand", "Use Digital Corps Brand Guide", { internal: true, initialStatus: "complete", initialEndorsements: 3 }),
