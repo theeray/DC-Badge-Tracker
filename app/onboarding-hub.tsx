@@ -55,7 +55,7 @@ const agenda = [
   },
   {
     time: "30–43",
-    title: "Activate the Badge Tracker",
+    title: "Activate DC Central",
     detail: "Create a password with your approved email, verify the message in your inbox or junk folder, sign in, and complete your member profile below.",
   },
   {
@@ -77,7 +77,7 @@ const agenda = [
 
 const resources = [
   {
-    label: "Digital Corps Badge Tracker",
+    label: "DC Central",
     detail: "Accounts, tutorials, progress, hours, assignments, and endorsements",
     href: "/",
   },

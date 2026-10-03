@@ -5,7 +5,7 @@ import Tracker from "./tracker";
 
 const root = document.getElementById("root");
 if (!root) {
-  throw new Error("Digital Corps Badge Tracker could not find its page root.");
+  throw new Error("DC Central could not find its page root.");
 }
 
 createRoot(root).render(

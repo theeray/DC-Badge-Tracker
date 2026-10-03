@@ -975,7 +975,7 @@ test("copied DC Meet responses are created atomically and stay immutable", async
   );
 });
 
-test("accounts without an active Badge Tracker profile cannot use DC Meet", async () => {
+test("accounts without an active DC Central profile cannot use DC Meet", async () => {
   const outsiderDb = environment.authenticatedContext("outside-1", {
     email: "outside@example.edu",
     email_verified: true,

@@ -1,5 +1,5 @@
 {
-  "name": "digital-corps-badges",
+  "name": "dc-central",
   "version": "0.1.0",
   "private": true,
   "engines": {
@@ -10,6 +10,7 @@
     "build": "npm run typecheck:firebase && npm run build:firebase",
     "build:firebase": "vite build --config firebase.vite.config.ts",
     "deploy:firebase": "npm run test && npx --yes firebase-tools@15.28.2 deploy --only firestore,hosting",
+    "deploy:firebase:central": "npm run test && npx --yes firebase-tools@15.28.2 deploy --only hosting:central --config firebase.central-hosting.json --project digital-corps-badge-tracker",
     "deploy:firebase:short": "npm run test && npx --yes firebase-tools@15.28.2 deploy --only hosting:short --config firebase.short-hosting.json --project digital-corps-badge-tracker",
     "preview": "vite preview --config firebase.vite.config.ts",
     "test": "npm run test:availability && npm run build",
@@ -37,5 +38,5 @@
     "vite": "8.0.13"
   },
   "type": "module",
-  "displayName": "Digital Corps Badge Tracker"
+  "displayName": "DC Central"
 }

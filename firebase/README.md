@@ -23,7 +23,7 @@ The application never stores passwords. Firebase Authentication handles password
 - `skillAssignments/{workerUid_skillId}`: `assigneeId`, `assigneeName`, `skillId`, `note`, `status`, `assignedBy`, `assignedByName`, `assignedByRole`, `createdAt`, `updatedAt`
 - `selfReportedSkills/{workerUid_skillId}`: `memberId`, `memberName`, `skillId`, `level`, `evidence`, `createdAt`, `updatedAt`
 - `availabilityPolls/{pollId}`: DC Meet title, organizer, time zone, duration, candidate half-hour slots, and open/closed selection state
-- `availabilityPolls/{pollId}/responses/{uid}`: each member's Available and If needed slots, tied to their verified Badge Tracker profile
+- `availabilityPolls/{pollId}/responses/{uid}`: each member's Available and If needed slots, tied to their verified DC Central profile
 - `availabilityPolls/{pollId}/copiedResponses/{uid}`: immutable starting availability copied by an organizer into a new poll until each member confirms or replaces it
 
 Roles are `mentee`, `mentor`, and `director`.

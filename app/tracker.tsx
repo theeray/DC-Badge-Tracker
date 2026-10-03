@@ -965,7 +965,7 @@ function TrackerWorkspace({
       <aside className="sidebar">
         <div className="brand-lockup">
           <img src="/brand/digital-corps-white.png" alt="Digital Corps" />
-          <div><strong>Badge Tracker</strong><span>Learn · Practice · Endorse</span></div>
+          <div><strong>DC Central</strong><span>Learn · Work · Connect</span></div>
         </div>
 
         <nav aria-label="Primary navigation">

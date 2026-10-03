@@ -13,7 +13,7 @@
     "redirects": [
       {
         "source": "**",
-        "destination": "https://dc-badges.web.app/",
+        "destination": "https://dc-central.web.app/",
         "type": 301
       }
     ]

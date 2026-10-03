@@ -67,16 +67,16 @@ export default function AuthPanel({
     <main className="auth-page">
       <section className="auth-identity">
         <img src="/brand/digital-corps-white.png" alt="Digital Corps" />
-        <span className="eyebrow">Badge Tracker</span>
-        <h1>Learn it. Practice it. Get endorsed.</h1>
+        <span className="eyebrow">DC Central</span>
+        <h1>Learn. Work. Connect.</h1>
         <p>
-          Track tutorial progress, show mentors what you can do, and build a
-          verified record of your Digital Corps skills.
+          Your Digital Corps home for onboarding, tutorials, badges, projects,
+          hours, team expertise, and meeting availability.
         </p>
         <div className="auth-pill-row">
           <span>96 learning activities</span>
-          <span>Real practice briefs</span>
-          <span>Mentor endorsements</span>
+          <span>Team workspace</span>
+          <span>Verified skills</span>
         </div>
       </section>
 

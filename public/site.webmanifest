@@ -1,7 +1,7 @@
 {
-  "name": "Digital Corps Badge Tracker",
-  "short_name": "DC Badges",
-  "description": "Track Digital Corps tutorials, progress, assignments, hours, and skill endorsements.",
+  "name": "DC Central",
+  "short_name": "DC Central",
+  "description": "The Digital Corps workspace for learning, projects, hours, meetings, people, and verified skills.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
