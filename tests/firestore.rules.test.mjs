@@ -18,6 +18,7 @@ import {
   Timestamp,
   updateDoc,
   where,
+  writeBatch,
 } from "firebase/firestore";
 
 const projectId = "digital-corps-badge-tracker-rules-test";
@@ -758,5 +759,237 @@ test("members manage only their own directory profile while staff can filter the
       major: "Design and Communication",
       updatedAt: serverTimestamp(),
     }),
+  );
+});
+
+const dcMeetSlots = ["1790899200000", "1790901000000", "1790902800000"];
+
+function dcMeetPoll(identity, overrides = {}) {
+  return {
+    title: "Weekly Digital Corps check-in",
+    description: "Choose the times that work for you.",
+    organizerName: identity.displayName,
+    ownerUid: identity.uid,
+    timezone: "America/Chicago",
+    duration: 60,
+    slotIds: dcMeetSlots,
+    status: "open",
+    selectedStart: "",
+    schemaVersion: 1,
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+    ...overrides,
+  };
+}
+
+test("active DC members can create account-owned DC Meet polls", async () => {
+  const mentorDb = authenticated(identities.mentor);
+  await assertSucceeds(
+    setDoc(
+      doc(mentorDb, "availabilityPolls", "mentor-weekly-meeting"),
+      dcMeetPoll(identities.mentor),
+    ),
+  );
+
+  await assertFails(
+    setDoc(
+      doc(mentorDb, "availabilityPolls", "forged-meeting"),
+      dcMeetPoll(identities.mentor, {
+        ownerUid: identities.director.uid,
+        organizerName: identities.director.displayName,
+      }),
+    ),
+  );
+});
+
+test("members submit only their own named availability", async () => {
+  const menteeDb = authenticated(identities.mentee);
+  await assertSucceeds(
+    getDoc(doc(menteeDb, "availabilityPolls", "mentor-weekly-meeting")),
+  );
+  await assertSucceeds(
+    setDoc(
+      doc(
+        menteeDb,
+        "availabilityPolls",
+        "mentor-weekly-meeting",
+        "responses",
+        identities.mentee.uid,
+      ),
+      {
+        name: identities.mentee.displayName,
+        available: dcMeetSlots.slice(0, 2),
+        ifNeeded: [dcMeetSlots[2]],
+        updatedAt: serverTimestamp(),
+      },
+    ),
+  );
+  await assertSucceeds(
+    getDocs(
+      collection(
+        menteeDb,
+        "availabilityPolls",
+        "mentor-weekly-meeting",
+        "responses",
+      ),
+    ),
+  );
+
+  await assertFails(
+    setDoc(
+      doc(
+        menteeDb,
+        "availabilityPolls",
+        "mentor-weekly-meeting",
+        "responses",
+        identities.mentor2.uid,
+      ),
+      {
+        name: identities.mentor2.displayName,
+        available: dcMeetSlots.slice(0, 1),
+        ifNeeded: [],
+        updatedAt: serverTimestamp(),
+      },
+    ),
+  );
+  await assertFails(
+    setDoc(
+      doc(
+        menteeDb,
+        "availabilityPolls",
+        "mentor-weekly-meeting",
+        "responses",
+        identities.mentee.uid,
+      ),
+      {
+        name: "A different person",
+        available: dcMeetSlots.slice(0, 1),
+        ifNeeded: [],
+        updatedAt: serverTimestamp(),
+      },
+    ),
+  );
+  await assertFails(
+    setDoc(
+      doc(
+        menteeDb,
+        "availabilityPolls",
+        "mentor-weekly-meeting",
+        "responses",
+        identities.mentee.uid,
+      ),
+      {
+        name: identities.mentee.displayName,
+        available: [dcMeetSlots[0], "1790999999999"],
+        ifNeeded: [],
+        updatedAt: serverTimestamp(),
+      },
+    ),
+  );
+});
+
+test("only the DC Meet organizer can rename, close, and reopen a poll", async () => {
+  const mentorDb = authenticated(identities.mentor);
+  const menteeDb = authenticated(identities.mentee);
+
+  await assertFails(
+    updateDoc(doc(menteeDb, "availabilityPolls", "mentor-weekly-meeting"), {
+      title: "Taken over by participant",
+      updatedAt: serverTimestamp(),
+    }),
+  );
+  await assertSucceeds(
+    updateDoc(doc(mentorDb, "availabilityPolls", "mentor-weekly-meeting"), {
+      title: "Friday Digital Corps check-in",
+      updatedAt: serverTimestamp(),
+    }),
+  );
+  await assertSucceeds(
+    updateDoc(doc(mentorDb, "availabilityPolls", "mentor-weekly-meeting"), {
+      status: "closed",
+      selectedStart: dcMeetSlots[0],
+      updatedAt: serverTimestamp(),
+    }),
+  );
+  await assertFails(
+    updateDoc(
+      doc(
+        menteeDb,
+        "availabilityPolls",
+        "mentor-weekly-meeting",
+        "responses",
+        identities.mentee.uid,
+      ),
+      {
+        available: [dcMeetSlots[0]],
+        ifNeeded: [],
+        updatedAt: serverTimestamp(),
+      },
+    ),
+  );
+  await assertSucceeds(
+    updateDoc(doc(mentorDb, "availabilityPolls", "mentor-weekly-meeting"), {
+      status: "open",
+      selectedStart: "",
+      updatedAt: serverTimestamp(),
+    }),
+  );
+});
+
+test("copied DC Meet responses are created atomically and stay immutable", async () => {
+  const mentorDb = authenticated(identities.mentor);
+  const batch = writeBatch(mentorDb);
+  const pollReference = doc(mentorDb, "availabilityPolls", "copied-meeting");
+  batch.set(
+    pollReference,
+    dcMeetPoll(identities.mentor, {
+      title: "Copied weekly meeting",
+      schemaVersion: 2,
+    }),
+  );
+  batch.set(
+    doc(pollReference, "copiedResponses", identities.mentee.uid),
+    {
+      name: identities.mentee.displayName,
+      available: dcMeetSlots.slice(0, 2),
+      ifNeeded: [],
+      updatedAt: serverTimestamp(),
+    },
+  );
+  await assertSucceeds(batch.commit());
+
+  await assertFails(
+    updateDoc(
+      doc(
+        mentorDb,
+        "availabilityPolls",
+        "copied-meeting",
+        "copiedResponses",
+        identities.mentee.uid,
+      ),
+      {
+        available: [],
+        updatedAt: serverTimestamp(),
+      },
+    ),
+  );
+});
+
+test("accounts without an active Badge Tracker profile cannot use DC Meet", async () => {
+  const outsiderDb = environment.authenticatedContext("outside-1", {
+    email: "outside@example.edu",
+    email_verified: true,
+  }).firestore();
+  await assertFails(
+    getDoc(doc(outsiderDb, "availabilityPolls", "mentor-weekly-meeting")),
+  );
+  await assertFails(
+    setDoc(
+      doc(outsiderDb, "availabilityPolls", "outside-meeting"),
+      dcMeetPoll({
+        uid: "outside-1",
+        displayName: "Outside User",
+      }),
+    ),
   );
 });

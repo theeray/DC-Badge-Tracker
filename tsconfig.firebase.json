@@ -18,7 +18,11 @@
   "include": [
     "app/admin-panel.tsx",
     "app/auth-panel.tsx",
+    "app/availability-demo.ts",
+    "app/availability-firebase.ts",
+    "app/availability-scheduling.ts",
     "app/data.ts",
+    "app/dc-availability.tsx",
     "app/firebase-entry.tsx",
     "app/firebase.ts",
     "app/member-development.tsx",

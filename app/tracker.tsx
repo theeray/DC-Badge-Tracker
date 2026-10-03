@@ -1,12 +1,14 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { lazy, Suspense, useEffect, useMemo, useState } from "react";
 import AdminPanel from "./admin-panel";
 import AuthPanel from "./auth-panel";
 import MemberDevelopment from "./member-development";
 import OnboardingHub from "./onboarding-hub";
 import SkillsDashboard from "./skills-dashboard";
 import TimeTracker from "./time-tracker";
+
+const DCAvailability = lazy(() => import("./dc-availability"));
 import {
   allSkills,
   learningAreas,
@@ -526,7 +528,9 @@ function TrackerWorkspace({
   onSignOut: () => Promise<void>;
 }) {
   const role: Role = session?.profile.role ?? "guest";
-  const [view, setView] = useState<View>("overview");
+  const [view, setView] = useState<View>(() =>
+    window.location.hash.startsWith("#availability") ? "dc-meet" : "overview",
+  );
   const [statuses, setStatuses] = useState<Record<string, SkillStatus>>(defaultStatuses);
   const [endorsements, setEndorsements] = useState<Record<string, number>>(defaultEndorsements);
   const [sessionEndorsed, setSessionEndorsed] = useState<string[]>([]);
@@ -546,6 +550,16 @@ function TrackerWorkspace({
   const [syncState, setSyncState] = useState<"loading" | "saved" | "guest" | "error">(
     role === "guest" ? "guest" : "loading",
   );
+
+  useEffect(() => {
+    const openSharedPoll = () => {
+      if (window.location.hash.startsWith("#availability")) {
+        setView("dc-meet");
+      }
+    };
+    window.addEventListener("hashchange", openSharedPoll);
+    return () => window.removeEventListener("hashchange", openSharedPoll);
+  }, []);
 
   useEffect(() => {
     if (role !== "mentor" && role !== "director") {
@@ -730,6 +744,13 @@ function TrackerWorkspace({
 
   const setActiveView = (next: View) => {
     setView(next);
+    if (next === "dc-meet") {
+      if (!window.location.hash.startsWith("#availability")) {
+        window.location.hash = "availability";
+      }
+    } else if (window.location.hash.startsWith("#availability")) {
+      window.history.replaceState(null, "", `${window.location.pathname}${window.location.search}`);
+    }
     setSelectedGroup("All skills");
     setQuery("");
   };
@@ -967,6 +988,11 @@ function TrackerWorkspace({
             </button>
           ) : null}
           {session ? (
+            <button className={view === "dc-meet" ? "active" : ""} onClick={() => setActiveView("dc-meet")}>
+              <span className="nav-index">⌁</span><span>DC Meet</span>
+            </button>
+          ) : null}
+          {session ? (
             <button className={view === "member-development" ? "active" : ""} onClick={() => setActiveView("member-development")}>
               <span className="nav-index">◎</span><span>Assignments & badges</span>
             </button>
@@ -1175,6 +1201,12 @@ function TrackerWorkspace({
 
           {view === "time-clock" && session ? (
             <TimeTracker session={session} />
+          ) : null}
+
+          {view === "dc-meet" && session ? (
+            <Suspense fallback={<p className="empty-state">Opening DC Meet…</p>}>
+              <DCAvailability session={session} />
+            </Suspense>
           ) : null}
 
           {view === "member-development" && session ? (
@@ -1592,6 +1624,9 @@ function TrackerWorkspace({
           <button className={view === "brand-guides" ? "active" : ""} onClick={() => setActiveView("brand-guides")}><span>◈</span>Brand</button>
           {session ? (
             <button className={view === "time-clock" ? "active" : ""} onClick={() => setActiveView("time-clock")}><span>◷</span>Hours</button>
+          ) : null}
+          {session ? (
+            <button className={view === "dc-meet" ? "active" : ""} onClick={() => setActiveView("dc-meet")}><span>⌁</span>Meet</button>
           ) : null}
           {session ? (
             <button className={view === "member-development" ? "active" : ""} onClick={() => setActiveView("member-development")}><span>◎</span>Assigned</button>

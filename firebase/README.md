@@ -22,6 +22,9 @@ The application never stores passwords. Firebase Authentication handles password
 - `skillCredentials/{workerUid_skillId}`: `workerId`, `workerName`, `skillId`, `level`, `note`, `awardedBy`, `awardedByName`, `updatedAt`
 - `skillAssignments/{workerUid_skillId}`: `assigneeId`, `assigneeName`, `skillId`, `note`, `status`, `assignedBy`, `assignedByName`, `assignedByRole`, `createdAt`, `updatedAt`
 - `selfReportedSkills/{workerUid_skillId}`: `memberId`, `memberName`, `skillId`, `level`, `evidence`, `createdAt`, `updatedAt`
+- `availabilityPolls/{pollId}`: DC Meet title, organizer, time zone, duration, candidate half-hour slots, and open/closed selection state
+- `availabilityPolls/{pollId}/responses/{uid}`: each member's Available and If needed slots, tied to their verified Badge Tracker profile
+- `availabilityPolls/{pollId}/copiedResponses/{uid}`: immutable starting availability copied by an organizer into a new poll until each member confirms or replaces it
 
 Roles are `mentee`, `mentor`, and `director`.
 
@@ -40,6 +43,7 @@ Roles are `mentee`, `mentor`, and `director`.
 - Student workers can create, edit, and remove only their own Silver and Gold self-reports. Directors may create private test claims; mentor and mentee accounts cannot read faculty test progress or claims. Self-reports remain visibly distinct from mentor endorsements and faculty verification.
 - Directors manage approvals, profiles, progress, endorsements, time entries, and skill credentials.
 - User roles cannot be self-promoted.
+- Active members can read shared DC Meet polls and save only their own named availability. Only the poll organizer can rename, close, reopen, or copy a poll; copied responses cannot be edited in place.
 
 ## Account continuity across hosting domains
 
@@ -61,5 +65,6 @@ Deploy `firestore.rules` and `firestore.indexes.json` before inviting pilot user
 10. Invite the remaining approved users only after the checks pass.
 11. Have one student save a member profile; confirm another student cannot read it while a mentor can filter it and export the matching CSV.
 12. Add faculty test progress and a faculty test badge; confirm neither record is readable from mentor or mentee accounts.
+13. Create a DC Meet poll, respond from a second member account, verify the ranked overlap, choose a time as the organizer, and confirm responses reopen only after the organizer reopens the poll.
 
 Account names and email addresses are live operational data and must not be committed to this public repository.

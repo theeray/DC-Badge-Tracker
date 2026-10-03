@@ -12,12 +12,15 @@
     "deploy:firebase": "npm run test && npx --yes firebase-tools@15.28.2 deploy --only firestore,hosting",
     "deploy:firebase:short": "npm run test && npx --yes firebase-tools@15.28.2 deploy --only hosting:short --config firebase.short-hosting.json --project digital-corps-badge-tracker",
     "preview": "vite preview --config firebase.vite.config.ts",
-    "test": "npm run build",
+    "test": "npm run test:availability && npm run build",
+    "test:availability": "node --test tests/availability-scheduling.test.mjs",
     "test:rules": "npx --yes firebase-tools@15.28.2 emulators:exec --project digital-corps-badge-tracker-rules-test --only firestore \"node --test tests/firestore.rules.test.mjs\"",
     "typecheck:firebase": "tsc --project tsconfig.firebase.json"
   },
   "dependencies": {
     "firebase": "^12.18.0",
+    "lucide-react": "^0.468.0",
+    "luxon": "^3.7.2",
     "react": "19.2.6",
     "react-dom": "19.2.6",
     "tailwindcss": "4.2.1"
@@ -26,6 +29,7 @@
     "@firebase/rules-unit-testing": "^5.0.2",
     "@tailwindcss/postcss": "4.2.1",
     "@types/node": "22.19.19",
+    "@types/luxon": "^3.7.1",
     "@types/react": "19.2.14",
     "@types/react-dom": "19.2.3",
     "@vitejs/plugin-react": "6.0.2",

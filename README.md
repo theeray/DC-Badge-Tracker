@@ -12,6 +12,7 @@ A role-based learning tracker for Digital Corps mentees, mentors, and faculty di
 - New hires complete the beginning-of-year member profile inside the app instead of editing a shared spreadsheet.
 - Mentors and directors can filter the private directory by role, interests, and verified or self-reported skills, copy matching emails, and export a CSV.
 - The New hire start view contains a 60-minute agenda and the official Digital Corps onboarding resources.
+- DC Meet lets any signed-in member create a scheduling poll, share it with the team, mark Available or If needed times, and see the best full-duration overlap across time zones.
 - The public curriculum and brand resources remain available in guest mode.
 
 ## Local development
@@ -38,7 +39,7 @@ npm run deploy:firebase
 
 The deploy command builds the static app, then publishes Firebase Hosting, Firestore rules, and Firestore indexes. Account approval records are operational data and are intentionally not committed to this public repository.
 
-Production app: https://digital-corps-badge-tracker.web.app
+Production app: https://dc-badges.web.app
 
 Source repository: https://github.com/theeray/DC-Badge-Tracker
 
