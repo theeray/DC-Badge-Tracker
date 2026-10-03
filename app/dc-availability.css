@@ -6,15 +6,17 @@
 @media(max-width:580px){.header-inner{padding:16px 20px}.brand{gap:12px}.brand-tad{font-size:1.8rem}.brand-meet{font-size:1.5rem}.brand-divider{height:27px}.header-action{font-size:.875rem;padding:8px 11px}.preview-banner{font-size:.75rem;text-align:left;padding:10px 20px}.preview-banner>span{font-size:.75rem;margin-right:7px}.create-page,.poll-page{padding:29px 20px 40px}.eyebrow{font-size:.75rem}.page-intro h1{font-size:2rem}.page-intro>div>p:last-child{font-size:.9rem}.page-intro{margin-bottom:25px}.page-intro>.secondary-button{font-size:.875rem;padding:9px 13px;min-height:39px}.form-card{padding:21px}.section-title{margin-bottom:24px}.dates-times-layout{grid-template-columns:1fr;gap:18px}.time-settings{border-left:0;border-top:1px solid var(--line);padding:20px 0 0;display:grid;grid-template-columns:1fr 1fr;gap:6px 13px}.calendar-days button{max-height:none}.time-settings>select{margin-bottom:14px}.create-bottom{align-items:stretch;flex-direction:column-reverse;gap:15px}.create-bottom>div{max-width:100%}.create-bottom p{align-items:flex-start;font-size:.75rem}.create-bottom p>svg{flex-shrink:0;margin-top:2px}.site-footer{margin:0 20px;font-size:.75rem;line-height:1.5}.poll-heading{flex-direction:column;gap:18px;margin-bottom:25px}.poll-heading h1{font-size:1.85rem}.poll-heading>.primary-button{align-self:stretch}.poll-meta{gap:9px 14px;font-size:.75rem}.poll-status{flex-wrap:wrap;gap:7px}.poll-status>span:last-child{font-size:.75rem}.poll-heading p{font-size:.85rem}.availability-toolbar{padding:15px 14px 0;gap:0}.view-tabs{width:100%;gap:19px}.view-tabs button{font-size:.875rem;padding-bottom:12px}.availability-toolbar>.zone-select{margin:9px 0 12px;max-width:100%}.grid-caption{padding:15px 14px 0;flex-wrap:wrap;gap:9px}.grid-caption>p{font-size:.75rem}.grid-area{padding:14px}.time-label{font-size:.75rem}.time-cell{min-height:31px;font-size:.75rem}.grid-footer{padding:14px}.grid-footer>span{font-size:.75rem}.edit-controls{padding:15px 14px 0;gap:15px}.name-field{min-width:100%}.paint-tools>div{gap:7px}.paint-tools button{padding:9px 12px;font-size:.75rem}.save-bar{padding:16px 14px}.save-bar>.primary-button{width:100%}.save-bar>div>p{font-size:.75rem}.browser-note{font-size:.75rem}.participants-list{grid-template-columns:1fr}.results-layout{grid-template-columns:1fr}.results-heading h2{font-size:1.1rem}.best-time{padding:15px}.rank{display:block}.best-time-label>strong{font-size:.85rem}.best-time-label>span{font-size:.875rem}.match-score>span{font-size:.75rem}.time-detail h3{font-size:.9rem}.time-detail-header p{font-size:.875rem}.person-status{font-size:.85rem}.person-status small{font-size:.75rem}.chosen-banner{padding:18px;gap:12px}.chosen-banner h2{font-size:1rem}.chosen-icon{height:32px;width:32px}.chosen-banner>.secondary-button{margin-left:0;width:100%}.chosen-banner>div:nth-child(2){max-width:calc(100% - 45px)}.modal{padding:22px}.modal-heading h2{font-size:1.1rem}.share-link{flex-direction:column}.modal-actions{flex-direction:column-reverse}.toast{font-size:.875rem;width:max-content}.demo-note{font-size:.75rem;padding:11px}.back-link{font-size:.75rem}}
 @media(prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}}
 
-/* Digital Corps identity for DC Meet. */
-.site-header{background:#054f45 url('/brand/dc-geometric-pattern.png') center/420px auto;color:#fff;border-bottom:1px solid #043f37;border-top:4px solid #e7992b}
-.header-inner{padding-top:22px;padding-bottom:22px;gap:30px}
-.brand-logo{width:145px;height:auto;display:block;max-width:100%}
-.availability-name{border-left:1px solid #ffffff55;padding-left:17px;color:#fff;font-family:'Manrope',system-ui,sans-serif;font-size:1.8rem;font-weight:750;letter-spacing:-.04em}
-.school-name{border-left:1px solid #ffffff55;color:#fff;padding-left:26px;font-size:.875rem}
-.school-name span{color:#b9d3cf;font-size:.75rem}
-.header-action{border-color:#f0b75e;color:#fff;background:#e7992b}
-.header-action:hover{background:#f1a83b}
+/* Digital Corps identity for DC Meet. Keep this header intentionally simple:
+   the former tiled pattern overwhelmed the controls and produced white shapes
+   that looked like a broken, oversized logo at some viewport sizes. */
+.site-header{background:#054f45;color:#fff;border-bottom:1px solid #033c35;border-top:4px solid #e7992b}
+.header-inner{min-height:88px;padding-top:16px;padding-bottom:16px;gap:24px}
+.brand-logo{width:112px;height:54px;object-fit:contain;display:block;max-width:112px}
+.availability-name{border-left:2px solid #8db1ad;padding-left:16px;color:#fff;font-family:'Manrope',system-ui,sans-serif;font-size:1.65rem;font-weight:750;line-height:1;letter-spacing:-.035em}
+.school-name{border-left:1px solid #8db1ad;color:#fff;padding-left:24px;font-size:.9rem;font-weight:650;line-height:1.45}
+.school-name span{color:#d7e7e4;font-size:.8rem;font-weight:500}
+.header-action{border-color:#f6b958;color:#17352f;background:#e7992b;font-weight:750;box-shadow:0 2px 0 #033c35}
+.header-action:hover{background:#f3ad3d;color:#102a26}
 .eyebrow{color:#54777b}.step-number{color:#12666b;background:#e4f3f3}
 .time-cell.heat-3,.time-cell.heat-4{color:#fff}.time-cell.heat-1,.time-cell.heat-2{color:#24575a}
 .time-cell.available{color:#12666b}.person-status.available>i{background:#31b1b3}.person-status.needed>i{background:#a39a18}
@@ -23,8 +25,8 @@
 .best-time.selected{color:#12666b}.preview-banner{background:#f7f5d8;color:#686318}
 .primary-button{box-shadow:0 2px 3px #123f3208}.chosen-icon{color:#12666b}
 .time-cell:disabled{opacity:.55;cursor:default}
-@media(max-width:800px){.brand-logo{width:130px}.availability-name{font-size:1.55rem}}
-@media(max-width:580px){.brand-logo{width:100px}.availability-name{font-size:1.35rem;padding-left:12px}.header-inner{gap:15px;padding-top:17px;padding-bottom:17px}.header-action{padding:8px 10px;white-space:nowrap}.header-action svg{width:15px}.brand{min-width:0}}
+@media(max-width:800px){.brand-logo{width:104px;height:50px;max-width:104px}.availability-name{font-size:1.5rem}}
+@media(max-width:580px){.brand-logo{width:88px;height:43px;max-width:88px}.availability-name{font-size:1.3rem;padding-left:10px}.header-inner{gap:12px;padding-top:13px;padding-bottom:13px;min-height:72px}.header-action{padding:9px 11px;white-space:nowrap}.header-action svg{width:15px}.brand{min-width:0}}
 
 .heat-legend{flex-wrap:wrap}.heat-legend .needed-legend{margin-left:7px;font-size:.75rem;color:#796d31}.grid-caption{flex-wrap:wrap}.muted,.help-text,.grid-caption>p,.grid-footer>span,.browser-note,.participants-note,.owner-note,.time-label,.poll-meta,.site-footer{color:#607476}.person-status small{color:#667a74}.day-heading>span,.day-heading small{color:#677a77}.participant>div>span{color:#6b7d75}
 
@@ -41,7 +43,7 @@ html,body,#root{background:#f5f7f7;color:#203538;color-scheme:light}
 .poll-actions{display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin:0 0 24px}.modal-actions{margin-top:24px}.copy-zone{margin:16px 0!important;color:#335a60!important}.copy-dates{display:grid;gap:12px;max-height:36vh;overflow:auto}.copy-dates>div{display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:center}.copy-dates label{margin:0}.template-list{margin-bottom:24px}.template-list>p{color:#445d62;margin:8px 0 16px}.template-list>div{display:flex;justify-content:space-between;gap:16px;padding:12px 0;border-top:1px solid var(--line)}.template-list a{font-weight:650;overflow-wrap:anywhere}.poll-heading h1{overflow-wrap:anywhere}
 @media(max-width:580px){
   .dc-availability-app{font-size:17px}
-  .header-inner{flex-wrap:wrap;gap:12px}.brand-logo{width:100px;max-width:100px;height:auto}.header-action{min-height:44px}
+  .header-inner{flex-wrap:nowrap;gap:12px}.brand-logo{width:88px;max-width:88px;height:43px}.header-action{min-height:44px}
   input,select,textarea{font-size:16px}.icon-button{width:44px;height:44px}.time-cell{min-height:44px}.calendar-days button{min-height:44px}
   .poll-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px}.poll-actions .text-button{grid-column:1/-1;min-height:44px;justify-content:center}
   .modal{max-height:calc(100dvh - 24px);overflow-y:auto;padding:20px;max-width:calc(100% - 24px)}.copy-dates>div{grid-template-columns:1fr;gap:6px}.copy-dates{max-height:none}.copy-dates input{min-width:0}
@@ -54,7 +56,7 @@ html,body,#root{background:#f5f7f7;color:#203538;color-scheme:light}
   :root{font-size:17px}
   .create-page,.poll-page{padding:22px 14px 38px}
   .header-inner{padding:14px 14px}
-  .brand-logo{width:100px;max-width:100px}
+  .brand-logo{width:88px;max-width:88px;height:43px}
   .header-action{font-size:.94rem}
   .page-intro{gap:15px;margin-bottom:20px}
   .page-intro h1{font-size:2rem;line-height:1.13;margin-bottom:10px}
