@@ -130,6 +130,7 @@ export const learningAreas: LearningArea[] = [
       skill(CONTENT, "Exhibit Design", "cc-hp-printers", "Stickers / HP 330-335 Printers", { internal: true }),
       skill(CONTENT, "Fabrication", "cc-dye-sub", "Print for Dye Sublimation", { internal: true }),
       skill(CONTENT, "Fabrication", "cc-heat-press", "Heat Press a Shirt", { href: "https://www.iorad.com/player/1937653/Heat-pressing-a-T-shirt--or-other-flat-substrate-" }),
+      skill(CONTENT, "Fabrication", "cc-embroidery-machine", "Embroidery Machine Tutorial", { href: "https://www.iorad.com/player/2710821/Embroidery-Machine-Tutorial#trysteps-1", searchTerms: ["embroidery", "embroider", "sewing", "machine"] }),
     ],
   },
   {

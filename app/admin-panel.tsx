@@ -22,12 +22,28 @@ const emptyApproval: ApprovedUser = {
   active: true,
 };
 
+const requestedMenteeApprovals: ApprovedUser[] = [
+  {
+    displayName: "Ethan Anderson",
+    email: "ethan.anderson.3@live.bemidjistate.edu",
+    role: "mentee",
+    active: true,
+  },
+  {
+    displayName: "Zachary Laskowski",
+    email: "zachary.laskowski@live.bemidjistate.edu",
+    role: "mentee",
+    active: true,
+  },
+];
+
 export default function AdminPanel({
   currentDirector,
 }: {
   currentDirector: UserProfile;
 }) {
   const [approvals, setApprovals] = useState<ApprovedUser[]>([]);
+  const [approvalsLoaded, setApprovalsLoaded] = useState(false);
   const [profiles, setProfiles] = useState<UserProfile[]>([]);
   const [draft, setDraft] = useState<ApprovedUser>(emptyApproval);
   const [message, setMessage] = useState("");
@@ -37,7 +53,10 @@ export default function AdminPanel({
   const [progressBackups, setProgressBackups] = useState<Set<string>>(new Set());
 
   useEffect(() => {
-    const stopApprovals = watchApprovedUsers(setApprovals, setMessage);
+    const stopApprovals = watchApprovedUsers((users) => {
+      setApprovals(users);
+      setApprovalsLoaded(true);
+    }, setMessage);
     const stopProfiles = watchAllUsers(setProfiles, setMessage);
     const stopBackups = watchProgressBackups(setProgressBackups, setMessage);
     return () => {
@@ -51,6 +70,32 @@ export default function AdminPanel({
     () => new Map(profiles.map((profile) => [profile.email, profile])),
     [profiles],
   );
+  const missingRequestedMentees = useMemo(
+    () =>
+      approvalsLoaded ? requestedMenteeApprovals.filter(
+        (member) =>
+          !approvals.some((approval) => approval.email === member.email),
+      ) : [],
+    [approvals, approvalsLoaded],
+  );
+
+  const approveRequestedMentees = async () => {
+    if (!missingRequestedMentees.length || bulkBusy) return;
+    setBulkBusy(true);
+    setMessage("");
+    try {
+      for (const member of missingRequestedMentees) {
+        await saveApprovedUser(member);
+      }
+      setMessage(
+        `${missingRequestedMentees.length} requested mentee account${missingRequestedMentees.length === 1 ? " was" : "s were"} added to the approved roster.`,
+      );
+    } catch (error) {
+      setMessage(readableFirebaseError(error));
+    } finally {
+      setBulkBusy(false);
+    }
+  };
 
   const addApproval = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -162,7 +207,8 @@ export default function AdminPanel({
           <h1>Accounts & records</h1>
           <p>
             Approve member emails, assign roles, pause access, and manage
-            mentee records. Members create and reset their own passwords.
+            mentee records. Every active mentor and faculty director can review
+            every active mentee. Members create and reset their own passwords.
           </p>
         </div>
         <div className="project-count">
@@ -247,6 +293,28 @@ export default function AdminPanel({
           </div>
         </article>
       </section>
+
+      {missingRequestedMentees.length ? (
+        <section className="admin-bulk-card requested-roster-card">
+          <div>
+            <span className="eyebrow">Requested roster additions</span>
+            <h2>Approve missing mentees</h2>
+            <p>
+              {missingRequestedMentees.map((member) => member.displayName).join(" and ")}
+              {missingRequestedMentees.length === 1 ? " is" : " are"} not yet on the approved roster.
+              Existing accounts and roles will not be changed.
+            </p>
+          </div>
+          <button
+            className="primary-button"
+            type="button"
+            disabled={bulkBusy || Boolean(busyEmail)}
+            onClick={() => void approveRequestedMentees()}
+          >
+            {bulkBusy ? "Adding…" : "Approve requested mentees"}
+          </button>
+        </section>
+      ) : null}
 
       <section className="admin-bulk-card">
         <div>

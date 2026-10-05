@@ -1904,6 +1904,33 @@ input:focus-visible {
   font-size: 10px;
 }
 
+.tutorial-status-filter {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--evergreen, #054f45);
+  font-size: 14px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.tutorial-status-filter select {
+  min-height: 44px;
+  min-width: 175px;
+  border: 1px solid #cad7d4;
+  border-radius: 9px;
+  background: #fff;
+  color: #173b36;
+  padding: 9px 34px 9px 12px;
+  font: inherit;
+}
+
+.track-toolbar .group-tabs {
+  min-width: 0;
+  max-width: none;
+  flex: 1 1 auto;
+}
+
 .skills-list {
   display: flex;
   flex-direction: column;
@@ -6779,5 +6806,18 @@ select:focus-visible {
     background: white;
     box-shadow: 0 14px 38px rgb(5 36 32 / 24%);
     padding-bottom: 7px;
+  }
+}
+
+@media (max-width: 760px) {
+  .tutorial-status-filter {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .tutorial-status-filter select {
+    min-width: 0;
+    flex: 1 1 auto;
+    font-size: 16px;
   }
 }

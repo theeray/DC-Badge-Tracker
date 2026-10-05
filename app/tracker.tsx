@@ -37,12 +37,14 @@ import {
   watchMemberSelfReportedSkills,
   watchMemberSkillCredentials,
   watchProgress,
+  watchSkillAssignments,
   watchStudentWorkers,
   type AuthSession,
   type CredentialLevel,
   type DemonstrationRequest,
   type Endorsement,
   type SelfReportedSkill,
+  type SkillAssignment,
   type SkillCredential,
   type UserProfile,
 } from "./firebase";
@@ -54,6 +56,7 @@ type UndoAction = {
   message: string;
   run: () => Promise<void>;
 };
+type TutorialFilter = SkillStatus | "all" | "assigned" | "incomplete";
 
 const SELF_TRACKING_ID = "__self__";
 
@@ -541,7 +544,9 @@ function TrackerWorkspace({
   const [mentees, setMentees] = useState<UserProfile[]>([]);
   const [selectedMenteeId, setSelectedMenteeId] = useState("");
   const [selectedGroup, setSelectedGroup] = useState("All skills");
+  const [tutorialFilter, setTutorialFilter] = useState<TutorialFilter>("all");
   const [query, setQuery] = useState("");
+  const [assignmentRecords, setAssignmentRecords] = useState<SkillAssignment[]>([]);
   const [project, setProject] = useState<ProjectBrief | null>(null);
   const [selectedBrandGuide, setSelectedBrandGuide] = useState<BrandGuideId>("digital-corps");
   const [announcement, setAnnouncement] = useState("");
@@ -585,6 +590,21 @@ function TrackerWorkspace({
       },
     );
   }, [role, session?.profile.uid]);
+
+  useEffect(() => {
+    if (!session) {
+      setAssignmentRecords([]);
+      return;
+    }
+    return watchSkillAssignments(
+      session.profile,
+      setAssignmentRecords,
+      (message) => {
+        setAnnouncement(message);
+        setSyncState("error");
+      },
+    );
+  }, [session?.profile.uid, session?.profile.role]);
 
   const targetMenteeId =
     role === "mentee" ||
@@ -694,6 +714,19 @@ function TrackerWorkspace({
   ]).size;
   const activeArea = learningAreas.find((area) => area.id === view);
   const activeGroups = activeArea ? ["All skills", ...new Set(activeArea.skills.map((item) => item.group))] : [];
+  const activeAssignmentSkillIds = useMemo(
+    () =>
+      new Set(
+        assignmentRecords
+          .filter(
+            (assignment) =>
+              assignment.assigneeId === targetMenteeId &&
+              assignment.status !== "complete",
+          )
+          .map((assignment) => assignment.skillId),
+      ),
+    [assignmentRecords, targetMenteeId],
+  );
   const brandHero = selectedBrandGuide === "digital-corps"
     ? {
         eyebrow: "Digital Corps standards",
@@ -738,9 +771,15 @@ function TrackerWorkspace({
         `${item.title} ${item.group} ${item.searchTerms?.join(" ") ?? ""} ${area?.name ?? ""} ${area?.shortName ?? ""}`,
       ).join(" ");
       const matchesQuery = !searchingAllPaths || tokens.every((token) => searchableText.includes(token));
-      return matchesGroup && matchesQuery;
+      const itemStatus = statuses[item.id] ?? "not-started";
+      const matchesStatus =
+        tutorialFilter === "all" ||
+        (tutorialFilter === "assigned" && activeAssignmentSkillIds.has(item.id)) ||
+        (tutorialFilter === "incomplete" && itemStatus !== "complete") ||
+        tutorialFilter === itemStatus;
+      return matchesGroup && matchesQuery && matchesStatus;
     });
-  }, [activeArea, query, selectedGroup]);
+  }, [activeArea, activeAssignmentSkillIds, query, selectedGroup, statuses, tutorialFilter]);
 
   const setActiveView = (next: View) => {
     setView(next);
@@ -752,6 +791,7 @@ function TrackerWorkspace({
       window.history.replaceState(null, "", `${window.location.pathname}${window.location.search}`);
     }
     setSelectedGroup("All skills");
+    setTutorialFilter("all");
     setQuery("");
   };
 
@@ -1243,6 +1283,22 @@ function TrackerWorkspace({
                 <div className="group-tabs" role="tablist" aria-label="Skill groups">
                   {activeGroups.map((group) => <button key={group} role="tab" aria-selected={selectedGroup === group} className={selectedGroup === group ? "active" : ""} onClick={() => setSelectedGroup(group)}>{group}</button>)}
                 </div>
+                <label className="tutorial-status-filter">
+                  <span>Status</span>
+                  <select
+                    value={tutorialFilter}
+                    onChange={(event) => setTutorialFilter(event.target.value as TutorialFilter)}
+                    aria-label="Filter tutorials by progress status"
+                  >
+                    <option value="all">All tutorials</option>
+                    {session ? <option value="assigned">Assigned to work on</option> : null}
+                    <option value="incomplete">All incomplete</option>
+                    <option value="not-started">Not started</option>
+                    <option value="learning">Learning</option>
+                    <option value="ready">Ready for review</option>
+                    <option value="complete">Completed</option>
+                  </select>
+                </label>
                 <label className="search-field"><span>⌕</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search all tutorials" aria-label="Search all tutorials" /></label>
               </div>
 
@@ -1376,7 +1432,7 @@ function TrackerWorkspace({
                     </article>
                   );
                 })}
-                {!visibleSkills.length ? <div className="empty-state"><strong>No matching skills</strong><p>Try another search or skill group.</p></div> : null}
+                {!visibleSkills.length ? <div className="empty-state"><strong>No matching tutorials</strong><p>Try another search, group, or status filter.</p></div> : null}
               </section>
             </>
           ) : null}
