@@ -1011,6 +1011,12 @@ input:focus-visible {
   font-weight: 900;
 }
 
+.nav-index svg {
+  width: 15px;
+  height: 15px;
+  stroke-width: 2.25;
+}
+
 .sidebar nav button.active .nav-index {
   background: var(--soft-green);
   color: var(--green);
@@ -3570,9 +3576,29 @@ input:focus-visible {
     font-size: 14px;
   }
 
+  .mobile-nav-icon {
+    display: grid;
+    width: 28px;
+    height: 28px;
+    place-items: center;
+    border-radius: 8px;
+    color: var(--green);
+  }
+
+  .mobile-nav-icon svg {
+    width: 21px;
+    height: 21px;
+    stroke-width: 2.2;
+  }
+
   .mobile-nav button.active {
     background: var(--soft-green);
     color: var(--green);
+  }
+
+  .mobile-nav button.active .mobile-nav-icon {
+    background: var(--green);
+    color: white;
   }
 
   .mobile-path-switcher {
