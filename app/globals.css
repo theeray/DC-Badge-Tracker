@@ -98,91 +98,118 @@
 }
 
 .onboarding-agenda,
-.dc-central-guide,
 .member-profile-section,
 .onboarding-resources {
   margin-top: 40px;
 }
 
-.dc-central-guide {
-  scroll-margin-top: 28px;
-  border: 1px solid var(--line);
-  border-radius: 20px;
-  background: white;
-  padding: 30px;
+.product-tour-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  pointer-events: none;
 }
 
-.dc-central-guide .section-title p {
-  max-width: 850px;
+.product-tour-spotlight {
+  position: fixed;
+  border: 3px solid var(--orange);
+  border-radius: 14px;
+  box-shadow: 0 0 0 9999px rgb(2 27 24 / 72%), 0 0 0 7px rgb(231 153 43 / 24%);
+  transition: inset 180ms ease, width 180ms ease, height 180ms ease;
+}
+
+.product-tour-callout {
+  position: fixed;
+  width: min(390px, calc(100vw - 32px));
+  border: 1px solid rgb(255 255 255 / 28%);
+  border-radius: 17px;
+  background: white;
+  box-shadow: 0 22px 70px rgb(0 0 0 / 36%);
+  color: var(--ink);
+  padding: 22px;
+  pointer-events: auto;
+}
+
+.product-tour-callout::before {
+  position: absolute;
+  content: "";
+  width: 0;
+  height: 0;
+  border-style: solid;
+}
+
+.product-tour-callout.arrow-left::before {
+  top: 28px;
+  left: -13px;
+  border-width: 12px 13px 12px 0;
+  border-color: transparent white transparent transparent;
+}
+
+.product-tour-callout.arrow-down::before {
+  left: 50%;
+  bottom: -13px;
+  transform: translateX(-50%);
+  border-width: 13px 12px 0;
+  border-color: white transparent transparent;
+}
+
+.product-tour-progress {
+  color: var(--green);
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.product-tour-callout h2 {
+  margin: 8px 0 9px;
+  font-family: "Arial Black", Arial, sans-serif;
+  font-size: 24px;
+  letter-spacing: -0.035em;
+  line-height: 1.05;
+}
+
+.product-tour-callout p {
+  margin: 0;
   color: var(--muted);
   font-size: 15px;
   line-height: 1.55;
 }
 
-.dc-central-guide-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 14px;
-  margin: 24px 0 0;
-  padding: 0;
-  list-style: none;
+.product-tour-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 20px;
 }
 
-.dc-central-guide-grid li {
-  display: grid;
-  grid-template-columns: 42px minmax(0, 1fr);
-  gap: 14px;
-  border: 1px solid var(--line);
-  border-radius: 14px;
-  background: var(--paper);
-  padding: 18px;
+.product-tour-actions > div {
+  display: flex;
+  gap: 8px;
 }
 
-.dc-central-guide-grid li > span {
-  display: grid;
-  width: 40px;
-  height: 40px;
-  place-items: center;
-  border-radius: 11px;
-  background: var(--soft-green);
-  color: var(--green);
-  font-size: 12px;
+.product-tour-actions button {
+  min-height: 42px;
+  border-radius: 9px;
+  font: inherit;
+  font-size: 14px;
   font-weight: 900;
+  padding: 9px 14px;
+  cursor: pointer;
 }
 
-.dc-central-guide-grid h3 {
-  margin: 1px 0 6px;
-  color: var(--ink);
-  font-size: 18px;
-}
-
-.dc-central-guide-grid p {
-  margin: 0;
-  color: var(--muted);
-  font-size: 14px;
-  line-height: 1.55;
-}
-
-.dc-central-guide-note {
-  display: grid;
-  grid-template-columns: max-content minmax(0, 1fr);
-  gap: 14px;
-  margin-top: 14px;
-  border-left: 4px solid var(--orange);
-  border-radius: 10px;
-  background: var(--soft-orange);
-  padding: 15px 18px;
-}
-
-.dc-central-guide-note strong {
+.product-tour-skip,
+.product-tour-back {
+  border: 1px solid var(--line);
+  background: white;
   color: var(--green);
 }
 
-.dc-central-guide-note p {
-  margin: 0;
-  color: var(--ink);
-  font-size: 14px;
-  line-height: 1.5;
+.product-tour-next {
+  border: 1px solid var(--green);
+  background: var(--green);
+  color: white;
 }
 
 .onboarding-agenda > ol {
@@ -749,9 +776,6 @@
   }
 
   .onboarding-agenda p,
-  .dc-central-guide .section-title p,
-  .dc-central-guide-grid p,
-  .dc-central-guide-note p,
   .member-profile-heading p,
   .admin-bulk-card p,
   .onboarding-resource-grid p {
@@ -759,22 +783,20 @@
   }
 
   .member-profile-section,
-  .dc-central-guide,
   .member-directory-section {
     padding: 22px 18px;
   }
 
-  .dc-central-guide-grid {
-    grid-template-columns: 1fr;
+  .product-tour-callout {
+    padding: 19px;
   }
 
-  .dc-central-guide-grid h3 {
-    font-size: 20px;
+  .product-tour-callout h2 {
+    font-size: 23px;
   }
 
-  .dc-central-guide-note {
-    grid-template-columns: 1fr;
-    gap: 5px;
+  .product-tour-callout p {
+    font-size: 16px;
   }
 
   .member-profile-heading,

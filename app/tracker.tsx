@@ -69,6 +69,17 @@ type UndoAction = {
   run: () => Promise<void>;
 };
 type TutorialFilter = SkillStatus | "all" | "assigned" | "incomplete";
+type TourStep = {
+  target: string;
+  view: View;
+  title: string;
+  description: string;
+};
+type TourGeometry = {
+  spotlight: { top: number; left: number; width: number; height: number };
+  callout: { top: number; left: number };
+  arrow: "arrow-left" | "arrow-down";
+};
 
 const SELF_TRACKING_ID = "__self__";
 
@@ -88,6 +99,97 @@ const iconForArea: Record<string, string> = {
 };
 
 const searchStopWords = new Set(["a", "an", "and", "for", "of", "or", "the", "to"]);
+
+function ProductTour({
+  steps,
+  stepIndex,
+  onBack,
+  onNext,
+  onClose,
+}: {
+  steps: TourStep[];
+  stepIndex: number;
+  onBack: () => void;
+  onNext: () => void;
+  onClose: () => void;
+}) {
+  const [geometry, setGeometry] = useState<TourGeometry | null>(null);
+  const step = steps[stepIndex];
+
+  useEffect(() => {
+    let frame = 0;
+    const measure = () => {
+      const targets = Array.from(document.querySelectorAll<HTMLElement>(`[data-tour="${step.target}"]`));
+      const target = targets.find((element) => {
+        const rect = element.getBoundingClientRect();
+        return rect.width > 0 && rect.height > 0 && getComputedStyle(element).visibility !== "hidden";
+      });
+      if (!target) {
+        setGeometry(null);
+        return;
+      }
+      target.scrollIntoView({ block: "nearest", inline: "center" });
+      frame = requestAnimationFrame(() => {
+        const rect = target.getBoundingClientRect();
+        const mobile = window.innerWidth <= 760;
+        const calloutWidth = Math.min(390, window.innerWidth - 32);
+        const calloutHeight = mobile ? 260 : 250;
+        const top = mobile
+          ? Math.max(16, Math.min(rect.top - calloutHeight - 20, window.innerHeight - calloutHeight - 16))
+          : Math.max(16, Math.min(rect.top, window.innerHeight - calloutHeight - 16));
+        const left = mobile
+          ? Math.max(16, (window.innerWidth - calloutWidth) / 2)
+          : Math.max(16, Math.min(rect.right + 22, window.innerWidth - calloutWidth - 16));
+        setGeometry({
+          spotlight: {
+            top: Math.max(4, rect.top - 6),
+            left: Math.max(4, rect.left - 6),
+            width: Math.min(window.innerWidth - 8, rect.width + 12),
+            height: rect.height + 12,
+          },
+          callout: { top, left },
+          arrow: mobile ? "arrow-down" : "arrow-left",
+        });
+      });
+    };
+    const firstFrame = requestAnimationFrame(measure);
+    window.addEventListener("resize", measure);
+    window.addEventListener("scroll", measure, true);
+    return () => {
+      cancelAnimationFrame(firstFrame);
+      cancelAnimationFrame(frame);
+      window.removeEventListener("resize", measure);
+      window.removeEventListener("scroll", measure, true);
+    };
+  }, [step.target]);
+
+  useEffect(() => {
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", closeOnEscape);
+    return () => window.removeEventListener("keydown", closeOnEscape);
+  }, [onClose]);
+
+  if (!geometry) return null;
+  return (
+    <div className="product-tour-layer" aria-live="polite">
+      <div className="product-tour-spotlight" style={geometry.spotlight} aria-hidden="true" />
+      <section className={`product-tour-callout ${geometry.arrow}`} style={geometry.callout} role="dialog" aria-modal="true" aria-labelledby="product-tour-title">
+        <span className="product-tour-progress">Step {stepIndex + 1} of {steps.length}</span>
+        <h2 id="product-tour-title">{step.title}</h2>
+        <p>{step.description}</p>
+        <div className="product-tour-actions">
+          <button type="button" className="product-tour-skip" onClick={onClose}>Exit tour</button>
+          <div>
+            {stepIndex > 0 ? <button type="button" className="product-tour-back" onClick={onBack}>← Back</button> : null}
+            <button type="button" className="product-tour-next" onClick={onNext}>{stepIndex === steps.length - 1 ? "Finish" : "Next →"}</button>
+          </div>
+        </div>
+      </section>
+    </div>
+  );
+}
 
 const normalizeSearchToken = (token: string) =>
   token.endsWith("ing") && token.length > 5 ? token.slice(0, -3) : token;
@@ -566,6 +668,7 @@ function TrackerWorkspace({
   const [announcement, setAnnouncement] = useState("");
   const [undoAction, setUndoAction] = useState<UndoAction | null>(null);
   const [undoBusy, setUndoBusy] = useState(false);
+  const [tourStep, setTourStep] = useState<number | null>(null);
   const [syncState, setSyncState] = useState<"loading" | "saved" | "guest" | "error">(
     role === "guest" ? "guest" : "loading",
   );
@@ -809,6 +912,37 @@ function TrackerWorkspace({
     setQuery("");
   };
 
+  const tourSteps = useMemo<TourStep[]>(() => {
+    const steps: TourStep[] = [
+      { target: "overview", view: "overview", title: "Home dashboard", description: "Start here for a quick view of tutorial progress, badges awaiting review, verified skills, and your next useful action." },
+      { target: "start", view: "new-hire-onboarding", title: "Start and member profile", description: "New hires use Start for the onboarding agenda, account guidance, uniforms, team resources, and the member profile managers use to build teams." },
+      { target: "learn", view: "onboarding", title: "Tutorial learning paths", description: "Learn contains every tutorial. Choose a path, search or filter the list, open the training link, and record your own progress on each tutorial." },
+      { target: "projects", view: "projects", title: "Practice projects", description: "Projects turn tutorials into portfolio-style work. Open a brief, download its resources, and use it to practice a real Digital Corps workflow." },
+      { target: "brand", view: "brand-guides", title: "Brand guides and assets", description: "Brand contains the official Digital Corps, BSU, Athletics, and TAD guidance and downloadable production files. Check it before designing for a campus identity." },
+    ];
+    if (session) {
+      steps.push(
+        { target: "hours", view: "time-clock", title: "Work-hour tracking", description: "Hours runs a live clock with seconds. Start and stop it while you work, or add and correct an entry when you forgot the clock or left it running." },
+        { target: "assigned", view: "member-development", title: "Assignments and badges", description: "Find work assigned to you, self-report Silver or Gold skill status, request a review, and see whether a mentor has verified an endorsement." },
+        { target: "team", view: "skills-dashboard", title: role === "mentee" ? "Find a mentor" : "Team skills directory", description: role === "mentee" ? "Browse every mentor’s reported and verified skills so you know who can help, demonstrate a process, or review your work." : "Filter members by interests and skill levels to find people for jobs, training, and collaboration." },
+        { target: "meet", view: "dc-meet", title: "Schedule with DC Meet", description: "Create availability polls, share a unique link with members or guests, compare responses, and select the final meeting time." },
+      );
+    }
+    return steps;
+  }, [role, session]);
+
+  const moveTour = (nextIndex: number) => {
+    if (nextIndex < 0) return;
+    if (nextIndex >= tourSteps.length) {
+      setTourStep(null);
+      return;
+    }
+    setActiveView(tourSteps[nextIndex].view);
+    setTourStep(nextIndex);
+  };
+
+  const startTour = () => moveTour(0);
+
   const advanceStatus = async (item: Skill) => {
     if (!isSelfTracking || !targetMenteeId) return;
     const current = statuses[item.id];
@@ -1024,35 +1158,35 @@ function TrackerWorkspace({
 
         <nav aria-label="Primary navigation">
           <p className="nav-label">Workspace</p>
-          <button className={view === "overview" ? "active" : ""} onClick={() => setActiveView("overview")}>
+          <button data-tour="overview" className={view === "overview" ? "active" : ""} onClick={() => setActiveView("overview")}>
             <span className="nav-index" aria-hidden="true"><House /></span><span>Overview</span>
           </button>
-          <button className={view === "new-hire-onboarding" ? "active" : ""} onClick={() => setActiveView("new-hire-onboarding")}>
+          <button data-tour="start" className={view === "new-hire-onboarding" ? "active" : ""} onClick={() => setActiveView("new-hire-onboarding")}>
             <span className="nav-index" aria-hidden="true"><UserPlus /></span><span>New hire start</span>
           </button>
-          <button className={view === "projects" ? "active" : ""} onClick={() => setActiveView("projects")}>
+          <button data-tour="projects" className={view === "projects" ? "active" : ""} onClick={() => setActiveView("projects")}>
             <span className="nav-index" aria-hidden="true"><ClipboardCheck /></span><span>Practice projects</span><em>{projectBriefs.length}</em>
           </button>
-          <button className={view === "brand-guides" ? "active" : ""} onClick={() => setActiveView("brand-guides")}>
+          <button data-tour="brand" className={view === "brand-guides" ? "active" : ""} onClick={() => setActiveView("brand-guides")}>
             <span className="nav-index" aria-hidden="true"><BookOpen /></span><span>Brand guides</span><em>{brandGuides.length}</em>
           </button>
           {session ? (
-            <button className={view === "time-clock" ? "active" : ""} onClick={() => setActiveView("time-clock")}>
+            <button data-tour="hours" className={view === "time-clock" ? "active" : ""} onClick={() => setActiveView("time-clock")}>
               <span className="nav-index" aria-hidden="true"><Clock3 /></span><span>Time clock</span>
             </button>
           ) : null}
           {session ? (
-            <button className={view === "dc-meet" ? "active" : ""} onClick={() => setActiveView("dc-meet")}>
+            <button data-tour="meet" className={view === "dc-meet" ? "active" : ""} onClick={() => setActiveView("dc-meet")}>
               <span className="nav-index" aria-hidden="true"><CalendarClock /></span><span>DC Meet</span>
             </button>
           ) : null}
           {session ? (
-            <button className={view === "member-development" ? "active" : ""} onClick={() => setActiveView("member-development")}>
+            <button data-tour="assigned" className={view === "member-development" ? "active" : ""} onClick={() => setActiveView("member-development")}>
               <span className="nav-index" aria-hidden="true"><Medal /></span><span>Assignments & badges</span>
             </button>
           ) : null}
           {session ? (
-            <button className={view === "skills-dashboard" ? "active" : ""} onClick={() => setActiveView("skills-dashboard")}>
+            <button data-tour="team" className={view === "skills-dashboard" ? "active" : ""} onClick={() => setActiveView("skills-dashboard")}>
               <span className="nav-index" aria-hidden="true"><Users /></span><span>{role === "mentee" ? "Mentor skills" : "Team directory"}</span>
             </button>
           ) : null}
@@ -1064,7 +1198,7 @@ function TrackerWorkspace({
 
           <p className="nav-label">Learning paths</p>
           {learningAreas.map((area) => (
-            <button key={area.id} className={view === area.id ? "active" : ""} onClick={() => setActiveView(area.id)}>
+            <button data-tour={area.id === "onboarding" ? "learn" : undefined} key={area.id} className={view === area.id ? "active" : ""} onClick={() => setActiveView(area.id)}>
               <span className="nav-index">{iconForArea[area.id]}</span><span>{area.shortName}</span>
               <em>{area.skills.length}</em>
             </button>
@@ -1250,7 +1384,7 @@ function TrackerWorkspace({
           ) : null}
 
           {view === "new-hire-onboarding" ? (
-            <OnboardingHub session={session} onRequireSignIn={onRequireSignIn} />
+            <OnboardingHub session={session} onRequireSignIn={onRequireSignIn} onStartTour={startTour} />
           ) : null}
 
           {view === "time-clock" && session ? (
@@ -1687,22 +1821,22 @@ function TrackerWorkspace({
         </div>
 
         <div className="mobile-nav" aria-label="Mobile navigation">
-          <button className={view === "overview" ? "active" : ""} onClick={() => setActiveView("overview")}><span className="mobile-nav-icon" aria-hidden="true"><House /></span>Home</button>
-          <button className={view === "new-hire-onboarding" ? "active" : ""} onClick={() => setActiveView("new-hire-onboarding")}><span className="mobile-nav-icon" aria-hidden="true"><UserPlus /></span>Start</button>
-          <button className={learningAreas.some((area) => area.id === view) ? "active" : ""} onClick={() => setActiveView("onboarding")}><span className="mobile-nav-icon" aria-hidden="true"><GraduationCap /></span>Learn</button>
-          <button className={view === "projects" ? "active" : ""} onClick={() => setActiveView("projects")}><span className="mobile-nav-icon" aria-hidden="true"><ClipboardCheck /></span>Projects</button>
-          <button className={view === "brand-guides" ? "active" : ""} onClick={() => setActiveView("brand-guides")}><span className="mobile-nav-icon" aria-hidden="true"><BookOpen /></span>Brand</button>
+          <button data-tour="overview" className={view === "overview" ? "active" : ""} onClick={() => setActiveView("overview")}><span className="mobile-nav-icon" aria-hidden="true"><House /></span>Home</button>
+          <button data-tour="start" className={view === "new-hire-onboarding" ? "active" : ""} onClick={() => setActiveView("new-hire-onboarding")}><span className="mobile-nav-icon" aria-hidden="true"><UserPlus /></span>Start</button>
+          <button data-tour="learn" className={learningAreas.some((area) => area.id === view) ? "active" : ""} onClick={() => setActiveView("onboarding")}><span className="mobile-nav-icon" aria-hidden="true"><GraduationCap /></span>Learn</button>
+          <button data-tour="projects" className={view === "projects" ? "active" : ""} onClick={() => setActiveView("projects")}><span className="mobile-nav-icon" aria-hidden="true"><ClipboardCheck /></span>Projects</button>
+          <button data-tour="brand" className={view === "brand-guides" ? "active" : ""} onClick={() => setActiveView("brand-guides")}><span className="mobile-nav-icon" aria-hidden="true"><BookOpen /></span>Brand</button>
           {session ? (
-            <button className={view === "time-clock" ? "active" : ""} onClick={() => setActiveView("time-clock")}><span className="mobile-nav-icon" aria-hidden="true"><Clock3 /></span>Hours</button>
+            <button data-tour="hours" className={view === "time-clock" ? "active" : ""} onClick={() => setActiveView("time-clock")}><span className="mobile-nav-icon" aria-hidden="true"><Clock3 /></span>Hours</button>
           ) : null}
           {session ? (
-            <button className={view === "dc-meet" ? "active" : ""} onClick={() => setActiveView("dc-meet")}><span className="mobile-nav-icon" aria-hidden="true"><CalendarClock /></span>Meet</button>
+            <button data-tour="meet" className={view === "dc-meet" ? "active" : ""} onClick={() => setActiveView("dc-meet")}><span className="mobile-nav-icon" aria-hidden="true"><CalendarClock /></span>Meet</button>
           ) : null}
           {session ? (
-            <button className={view === "member-development" ? "active" : ""} onClick={() => setActiveView("member-development")}><span className="mobile-nav-icon" aria-hidden="true"><Medal /></span>Assigned</button>
+            <button data-tour="assigned" className={view === "member-development" ? "active" : ""} onClick={() => setActiveView("member-development")}><span className="mobile-nav-icon" aria-hidden="true"><Medal /></span>Assigned</button>
           ) : null}
           {session ? (
-            <button className={view === "skills-dashboard" ? "active" : ""} onClick={() => setActiveView("skills-dashboard")}><span className="mobile-nav-icon" aria-hidden="true"><Users /></span>{role === "mentee" ? "Mentors" : "Team"}</button>
+            <button data-tour="team" className={view === "skills-dashboard" ? "active" : ""} onClick={() => setActiveView("skills-dashboard")}><span className="mobile-nav-icon" aria-hidden="true"><Users /></span>{role === "mentee" ? "Mentors" : "Team"}</button>
           ) : null}
           {role === "director" ? (
             <button className={view === "admin" ? "active" : ""} onClick={() => setActiveView("admin")}><span className="mobile-nav-icon" aria-hidden="true"><Settings /></span>Admin</button>
@@ -1721,6 +1855,7 @@ function TrackerWorkspace({
       ) : null}
       <p className="sr-only" aria-live="polite">{announcement}</p>
       {project ? <ProjectModal project={project} onClose={() => setProject(null)} /> : null}
+      {tourStep !== null ? <ProductTour steps={tourSteps} stepIndex={tourStep} onBack={() => moveTour(tourStep - 1)} onNext={() => moveTour(tourStep + 1)} onClose={() => setTourStep(null)} /> : null}
     </div>
   );
 }
