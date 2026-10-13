@@ -100,11 +100,11 @@ service cloud.firestore {
           'name',
           'available',
           'ifNeeded',
-          'participantType',
           'updatedAt'
         ])
         && nonblank(request.resource.data.name, 60)
-        && request.resource.data.participantType in ['member', 'guest']
+        && (!request.resource.data.keys().hasAny(['participantType'])
+          || request.resource.data.participantType in ['member', 'guest'])
         && request.resource.data.available is list
         && request.resource.data.ifNeeded is list
         && request.resource.data.available.size() <= 672
@@ -646,7 +646,8 @@ service cloud.firestore {
             (activeUser()
               && request.auth.uid == uid
               && request.resource.data.name == currentUser().displayName
-              && request.resource.data.participantType == 'member')
+              && (!request.resource.data.keys().hasAny(['participantType'])
+                || request.resource.data.participantType == 'member'))
             || (!signedIn()
               && uid.matches('guest_[a-f0-9]{32}')
               && request.resource.data.participantType == 'guest')
@@ -677,11 +678,11 @@ service cloud.firestore {
             'name',
             'available',
             'ifNeeded',
-            'participantType',
             'updatedAt'
           ])
           && nonblank(request.resource.data.name, 60)
-          && request.resource.data.participantType in ['member', 'guest']
+          && (!request.resource.data.keys().hasAny(['participantType'])
+            || request.resource.data.participantType in ['member', 'guest'])
           && request.resource.data.available is list
           && request.resource.data.ifNeeded is list
           && request.resource.data.available.size() <= 672

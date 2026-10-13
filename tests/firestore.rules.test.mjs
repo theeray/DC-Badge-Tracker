@@ -790,6 +790,24 @@ test("active DC members can create account-owned DC Meet polls", async () => {
       dcMeetPoll(identities.mentor),
     ),
   );
+  // Keep verified member responses compatible with a cached pre-guest build.
+  await assertSucceeds(
+    setDoc(
+      doc(
+        menteeDb,
+        "availabilityPolls",
+        "mentor-weekly-meeting",
+        "responses",
+        identities.mentee.uid,
+      ),
+      {
+        name: identities.mentee.displayName,
+        available: dcMeetSlots.slice(0, 2),
+        ifNeeded: [dcMeetSlots[2]],
+        updatedAt: serverTimestamp(),
+      },
+    ),
+  );
 
   await assertFails(
     setDoc(
