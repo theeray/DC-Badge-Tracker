@@ -77,9 +77,9 @@ const agenda = [
 
 const resources = [
   {
-    label: "DC Central",
-    detail: "Accounts, tutorials, progress, hours, assignments, and endorsements",
-    href: "/",
+    label: "How to use DC Central",
+    detail: "Quick-start guide for profiles, tutorials, badges, hours, assignments, and meetings",
+    href: "#dc-central-guide",
   },
   {
     label: "Digital Corps job request form",
@@ -246,6 +246,25 @@ export default function OnboardingHub({
         </ol>
       </section>
 
+      <section className="dc-central-guide" id="dc-central-guide" aria-labelledby="dc-central-guide-heading">
+        <div className="section-title">
+          <div>
+            <span className="eyebrow">DC Central quick start</span>
+            <h2 id="dc-central-guide-heading">Learn the site in six steps</h2>
+            <p>Use the main navigation to move between each tool. Your work saves to your verified DC Central account unless a screen specifically says it is stored only in this browser.</p>
+          </div>
+        </div>
+        <ol className="dc-central-guide-grid">
+          <li><span>01</span><div><h3>Complete your profile</h3><p>Open <strong>Start</strong>, enter your program, availability, interests, and current skills, then select <strong>Save member profile</strong>. Mentors and directors use this information to build teams and email groups.</p></div></li>
+          <li><span>02</span><div><h3>Work through tutorials</h3><p>Open <strong>Learn</strong>, choose a learning path, and filter tutorials by assigned, incomplete, learning, ready, or complete. Open a tutorial first, then use its progress control to record what you have done.</p></div></li>
+          <li><span>03</span><div><h3>Report badges and request review</h3><p>Use <strong>Assignments &amp; badges</strong> to self-report Silver when you can perform a skill and Gold when you can work independently or help train others. Self-reports remain clearly separate from verified mentor endorsements.</p></div></li>
+          <li><span>04</span><div><h3>Record work hours</h3><p>Open <strong>Hours</strong> and start the live clock when you begin working. Stop it when finished, or add and correct an entry if you forgot or left the clock running. Review your entries before payroll reporting.</p></div></li>
+          <li><span>05</span><div><h3>Find people and assignments</h3><p>Check <strong>Assignments &amp; badges</strong> for work assigned to you. Open <strong>Mentors</strong> or <strong>Team</strong> to find members by interests, self-reported skills, and verified badges so you know whom to ask for help.</p></div></li>
+          <li><span>06</span><div><h3>Schedule with DC Meet</h3><p>Open <strong>Meet</strong> to create an availability poll. Share its unique link with members or guests, mark every time that works, and save your response. Only the organizer can choose the final time or reopen a poll.</p></div></li>
+        </ol>
+        <div className="dc-central-guide-note"><strong>Status reminder</strong><p>Unsubmitted work stays incomplete or pending. Self-reported Silver and Gold show what a member says they can do; the Verified label confirms that a mentor or faculty director has endorsed it.</p></div>
+      </section>
+
       <section className="member-profile-section" id="member-profile">
         <div className="member-profile-heading">
           <div>
@@ -330,13 +349,15 @@ export default function OnboardingHub({
           </div>
         </div>
         <div className="onboarding-resource-grid">
-          {resources.map((resource) => (
-            <a key={resource.href} href={resource.href} target={resource.href === "/" ? undefined : "_blank"} rel={resource.href === "/" ? undefined : "noreferrer"}>
-              <span>Open ↗</span>
+          {resources.map((resource) => {
+            const external = resource.href.startsWith("http");
+            return (
+            <a key={resource.href} href={resource.href} target={external ? "_blank" : undefined} rel={external ? "noreferrer" : undefined}>
+              <span>{resource.href.startsWith("#") ? "View guide ↓" : "Open ↗"}</span>
               <strong>{resource.label}</strong>
               <p>{resource.detail}</p>
             </a>
-          ))}
+          )})}
         </div>
       </section>
     </>

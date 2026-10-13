@@ -98,9 +98,91 @@
 }
 
 .onboarding-agenda,
+.dc-central-guide,
 .member-profile-section,
 .onboarding-resources {
   margin-top: 40px;
+}
+
+.dc-central-guide {
+  scroll-margin-top: 28px;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  background: white;
+  padding: 30px;
+}
+
+.dc-central-guide .section-title p {
+  max-width: 850px;
+  color: var(--muted);
+  font-size: 15px;
+  line-height: 1.55;
+}
+
+.dc-central-guide-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  margin: 24px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.dc-central-guide-grid li {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr);
+  gap: 14px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--paper);
+  padding: 18px;
+}
+
+.dc-central-guide-grid li > span {
+  display: grid;
+  width: 40px;
+  height: 40px;
+  place-items: center;
+  border-radius: 11px;
+  background: var(--soft-green);
+  color: var(--green);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.dc-central-guide-grid h3 {
+  margin: 1px 0 6px;
+  color: var(--ink);
+  font-size: 18px;
+}
+
+.dc-central-guide-grid p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.dc-central-guide-note {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: 14px;
+  margin-top: 14px;
+  border-left: 4px solid var(--orange);
+  border-radius: 10px;
+  background: var(--soft-orange);
+  padding: 15px 18px;
+}
+
+.dc-central-guide-note strong {
+  color: var(--green);
+}
+
+.dc-central-guide-note p {
+  margin: 0;
+  color: var(--ink);
+  font-size: 14px;
+  line-height: 1.5;
 }
 
 .onboarding-agenda > ol {
@@ -667,6 +749,9 @@
   }
 
   .onboarding-agenda p,
+  .dc-central-guide .section-title p,
+  .dc-central-guide-grid p,
+  .dc-central-guide-note p,
   .member-profile-heading p,
   .admin-bulk-card p,
   .onboarding-resource-grid p {
@@ -674,8 +759,22 @@
   }
 
   .member-profile-section,
+  .dc-central-guide,
   .member-directory-section {
     padding: 22px 18px;
+  }
+
+  .dc-central-guide-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .dc-central-guide-grid h3 {
+    font-size: 20px;
+  }
+
+  .dc-central-guide-note {
+    grid-template-columns: 1fr;
+    gap: 5px;
   }
 
   .member-profile-heading,
