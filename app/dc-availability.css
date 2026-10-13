@@ -39,6 +39,7 @@ html,body,#root{background:#f5f7f7;color:#203538;color-scheme:light}
 .page-intro>div>p:last-child{color:#445d62}
 
 .save-bar>.notice{width:100%;margin-bottom:0}
+.identity-label{display:inline-flex;align-items:center;margin-left:7px;padding:2px 6px;border-radius:999px;font-size:.62rem;font-weight:750;letter-spacing:.04em;text-transform:uppercase;vertical-align:middle}.identity-label.verified{background:#e2f2ed;color:#176453}.identity-label.guest{background:#f7e8c9;color:#765618}.guest-field-note{display:block;margin-top:7px;color:#607476;font-size:.75rem;line-height:1.4}
 
 .poll-actions{display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin:0 0 24px}.modal-actions{margin-top:24px}.copy-zone{margin:16px 0!important;color:#335a60!important}.copy-dates{display:grid;gap:12px;max-height:36vh;overflow:auto}.copy-dates>div{display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:center}.copy-dates label{margin:0}.template-list{margin-bottom:24px}.template-list>p{color:#445d62;margin:8px 0 16px}.template-list>div{display:flex;justify-content:space-between;gap:16px;padding:12px 0;border-top:1px solid var(--line)}.template-list a{font-weight:650;overflow-wrap:anywhere}.poll-heading h1{overflow-wrap:anywhere}
 @media(max-width:580px){

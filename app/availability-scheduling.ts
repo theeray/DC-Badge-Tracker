@@ -110,7 +110,7 @@ export function copyPollData(source, responses, title, dates, uid) {
     map.set(id, String(next.toMillis()));
   }
   const poll = {title, description: source.description, organizerName: source.organizerName, ownerUid: uid, timezone: source.timezone, duration: source.duration, slotIds: [...map.values()].sort(), status: 'open', selectedStart: '', schemaVersion: 2};
-  const copied = responses.map(r => ({uid:r.uid, ...makeResponse(r.name, Object.fromEntries(Object.entries(responseValues(r)).map(([id,value])=>[map.get(id),value])), poll), copied:true}));
+  const copied = responses.map(r => ({uid:r.uid, ...makeResponse(r.name, Object.fromEntries(Object.entries(responseValues(r)).map(([id,value])=>[map.get(id),value])), poll), participantType:r.participantType==='guest'?'guest':'member', copied:true}));
   return {poll, responses:copied};
 }
 export function mergeResponses(copied, current) {

@@ -25,10 +25,22 @@ function getRoute() {
   const match = hash.match(/^availability\/poll\/([a-zA-Z0-9_-]{10,64})$/);
   return match ? { type: 'poll', id: match[1] } : { type: 'create' };
 }
+function getGuestResponseId(pollId) {
+  const key = `dc-meet-guest-${pollId}`;
+  try {
+    const saved = localStorage.getItem(key);
+    if (/^guest_[a-f0-9]{32}$/.test(saved || '')) return saved;
+    const id = `guest_${crypto.randomUUID().replaceAll('-', '')}`;
+    localStorage.setItem(key, id);
+    return id;
+  } catch {
+    return `guest_${crypto.randomUUID().replaceAll('-', '')}`;
+  }
+}
 function Brand() { return <a className="brand" href="#availability" aria-label="DC Meet home"><img className="brand-logo" src="/brand/digital-corps-white.png" alt="Digital Corps" width="170" height="70"/><span className="availability-name">Meet</span></a>; }
 function Notice({ children, error = false }) { return <div className={`notice ${error ? 'error' : ''}`} role={error ? 'alert' : 'status'}><Info size={18}/><span>{children}</span></div>; }
 
-export default function DCAvailability({ session }: { session: AuthSession }) {
+export default function DCAvailability({ session }: { session: AuthSession | null }) {
   const host = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (!host.current) return;
@@ -41,11 +53,11 @@ export default function DCAvailability({ session }: { session: AuthSession }) {
     const root = createRoot(mount);
     root.render(<AvailabilityApp session={session}/>);
     return () => root.unmount();
-  }, [session.profile.uid, session.profile.displayName]);
+  }, [session?.profile.uid, session?.profile.displayName]);
   return <div className="dc-availability-host" ref={host}/>;
 }
 
-function AvailabilityApp({ session }: { session: AuthSession }) {
+function AvailabilityApp({ session }: { session: AuthSession | null }) {
   const [route, setRoute] = useState(getRoute);
   const [preview, setPreview] = useState(null);
   const [toast, setToast] = useState('');
@@ -54,11 +66,19 @@ function AvailabilityApp({ session }: { session: AuthSession }) {
   const openDemo = () => { setPreview(demoPoll()); location.hash = 'availability/demo'; setRoute({type:'demo'}); };
   const demo = useMemo(() => preview || demoPoll(), [preview]);
   return <div className="dc-availability-app">
-    <header className="site-header"><div className="header-inner"><Brand/><div className="school-name">Find a time together<span>Digital Corps · Bemidji State University</span></div><a className="header-action" href="#availability"><Plus size={18}/>New poll</a></div></header>
-    {route.type === 'create' ? <CreatePoll session={session} onDemo={openDemo} notify={setToast}/> : <PollView session={session} key={`${route.type}-${route.id || ''}-${preview?.poll.id || ''}`} id={route.id} demo={route.type === 'demo' ? demo : null} notify={setToast} onDemoCopy={copy=>setPreview({...copy,poll:{...copy.poll,id:`demo-${Date.now()}-${Math.random()}`}})}/>} 
+    <header className="site-header"><div className="header-inner"><Brand/><div className="school-name">Find a time together<span>Digital Corps · Bemidji State University</span></div>{session?<a className="header-action" href="#availability"><Plus size={18}/>New poll</a>:<a className="header-action" href="/">Member sign in</a>}</div></header>
+    {route.type === 'create'
+      ? (session ? <CreatePoll session={session} onDemo={openDemo} notify={setToast}/> : <GuestAccessNotice/>)
+      : route.type === 'demo' && !session
+        ? <GuestAccessNotice/>
+        : <PollView session={session} key={`${route.type}-${route.id || ''}-${preview?.poll.id || ''}`} id={route.id} demo={route.type === 'demo' ? demo : null} notify={setToast} onDemoCopy={copy=>setPreview({...copy,poll:{...copy.poll,id:`demo-${Date.now()}-${Math.random()}`}})}/>}
     <footer className="site-footer"><span>DC Meet · Find a time together.</span><div><span>Digital Corps</span><span>·</span><span>Bemidji State University</span></div></footer>
     <div className={`toast ${toast ? 'visible' : ''}`} role="status"><Check size={18}/>{toast}</div>
   </div>;
+}
+
+function GuestAccessNotice() {
+  return <main className="not-found"><Users size={42}/><p className="eyebrow">DC MEET</p><h1>Open a shared poll link</h1><p>Guests can respond to a specific poll without a DC Central account. Creating and managing polls still requires an approved member account.</p><a className="primary-button" href="/">Member sign in</a></main>;
 }
 
 function DatePicker({ dates, setDates, zone }) {
@@ -111,12 +131,12 @@ function CreatePoll({ session, onDemo, notify }) {
         <label htmlFor="description">A little context <span className="optional">optional</span></label><textarea id="description" maxLength={600} rows={3} placeholder="Where you’ll meet, what you’ll discuss…" value={description} onChange={e=>setDescription(e.target.value)}/>
         <div className="details-divider"/>
         <label htmlFor="duration">How long do you need?</label><div className="duration-options" id="duration" role="group" aria-label="Meeting length">{[30,60,90,120].map(min => <button type="button" key={min} className={duration===min?'active':''} aria-pressed={duration===min} onClick={()=>setDuration(min)}>{min<60?`${min} min`:`${min/60} ${min===60?'hour':'hours'}`}</button>)}</div>
-        <div className="small-note"><Users size={18}/><p>DC members respond through their existing DC Central account.<br/>Names are connected to verified member profiles.</p></div>
+        <div className="small-note"><Users size={18}/><p>DC members respond with verified profiles. Guests with the link can enter a name and availability; guest responses are clearly labeled.</p></div>
       </section>
       <section className="form-card date-card"><div className="section-title"><span className="step-number">02</span><h2>Possible dates & times</h2></div>
         <div className="dates-times-layout"><DatePicker dates={dates} setDates={setDates} zone={timezone}/><div className="time-settings"><label htmlFor="start-time">Between</label><select id="start-time" value={start} onChange={e=>setStart(Number(e.target.value))}>{Array.from({length:48},(_,i)=>i*30).map(min=><option value={min} key={min}>{formatTime(min)}</option>)}</select><label htmlFor="end-time">And</label><select id="end-time" value={end} onChange={e=>setEnd(Number(e.target.value))}>{Array.from({length:48},(_,i)=>(i+1)*30).map(min=><option value={min} key={min}>{min===1440?'Midnight (end of day)':formatTime(min)}</option>)}</select><label htmlFor="create-zone">Time zone</label><ZoneSelect id="create-zone" value={timezone} onChange={setZone}/><p className="muted help-text">Participants can view these times in their own time zone.</p></div></div>
       </section>
-      <div className="create-bottom"><div>{error && <Notice error>{error}</Notice>}<p><LockKeyhole size={15}/> Signed-in Digital Corps members with the link can see names and availability.</p></div><button className="primary-button" type="button" onClick={create} disabled={busy}>{busy?'Creating…':'Create poll'}<ArrowRight size={18}/></button></div>
+      <div className="create-bottom"><div>{error && <Notice error>{error}</Notice>}<p><LockKeyhole size={15}/> Anyone with the poll link can see participant names and availability.</p></div><button className="primary-button" type="button" onClick={create} disabled={busy}>{busy?'Creating…':'Create poll'}<ArrowRight size={18}/></button></div>
     </form>
   </main>;
 }
@@ -124,9 +144,10 @@ function CreatePoll({ session, onDemo, notify }) {
 function PollView({ session, id, demo, notify, onDemoCopy }) {
   const [editingTitle,setEditingTitle] = useState(false), [copying,setCopying] = useState(false);
   const [poll,setPoll] = useState(demo?.poll || undefined), [responses,setResponses] = useState(demo?.responses || []);
-  const uid = demo ? 'demo-owner' : session.profile.uid;
+  const [guestUid] = useState(() => !session && !demo ? getGuestResponseId(id) : '');
+  const uid = demo ? 'demo-owner' : session?.profile.uid || guestUid;
   const [error,setError] = useState(''), [busy,setBusy] = useState(false);
-  const [mode,setMode] = useState('group'), [name,setName] = useState(session.profile.displayName), [values,setValues] = useState({}), [dirty,setDirty] = useState(false);
+  const [mode,setMode] = useState('group'), [name,setName] = useState(session?.profile.displayName || ''), [values,setValues] = useState({}), [dirty,setDirty] = useState(false);
   const [zone,setZone] = useState(browserZone), [tool,setTool] = useState('available'), [selected,setSelected] = useState(''), [confirm,setConfirm] = useState(false), [share,setShare] = useState(false);
   const loadedMine = useRef(false);
   useEffect(() => {
@@ -139,7 +160,7 @@ function PollView({ session, id, demo, notify, onDemoCopy }) {
   const ranked = useMemo(()=>poll ? rankTimes(poll,responses) : [],[poll,responses]);
   const best = ranked[0];
   const selectedResult = ranked.find(time=>time.start===(selected || poll?.selectedStart)) || best;
-  const owner = poll?.ownerUid===uid;
+  const owner = Boolean(session && poll?.ownerUid===uid);
   useEffect(() => { if(owner && !mine && !dirty && !name) setName(poll.organizerName); }, [owner,mine,dirty,name,poll?.organizerName]);
   const closed = poll?.status==='closed';
   const shareUrl = poll && !demo ? `${location.origin}${location.pathname}#availability/poll/${poll.id}` : '';
@@ -155,9 +176,10 @@ function PollView({ session, id, demo, notify, onDemoCopy }) {
     if(!name.trim()) { setError('Enter your name before saving availability.'); document.getElementById('participant-name')?.focus(); return; }
     setBusy(true);setError('');
     try {
-      const response=makeResponse(name,values,poll);
+      const response={...makeResponse(name,values,poll),participantType:session?'member':'guest'};
       if(demo) setResponses(old=>[...old.filter(r=>r.uid!==uid),{...response,uid}]);
-      else await data.saveResponse(poll,session,values);
+      else if(session) await data.saveResponse(poll,{id:uid,name:session.profile.displayName,participantType:'member'},values);
+      else await data.saveResponse(poll,{id:uid,name:name.trim(),participantType:'guest'},values);
       setDirty(false);loadedMine.current=true;setMode('group');notify(demo ? 'Saved in this preview. Refreshing will clear it.' : 'Your availability is saved.');
     }catch(error){setError(data.friendlyError(error));}finally{setBusy(false);}
   }
@@ -165,29 +187,29 @@ function PollView({ session, id, demo, notify, onDemoCopy }) {
   async function reopen() { setBusy(true);try { if(demo)setPoll({...poll,status:'open',selectedStart:''});else await data.reopenPoll(poll);notify('Your poll is open again.'); }catch(error){setError(data.friendlyError(error));}finally{setBusy(false);} }
   async function copy() { try { await navigator.clipboard.writeText(shareUrl);notify('Poll link copied.'); }catch { setShare(true); } }
   const paint = (id,value) => {setValues(old=>{const next={...old};if(value==='erase')delete next[id];else next[id]=value;return next;});setDirty(true);};
-  if(poll===null)return <main className="not-found"><CalendarDays size={42}/><h1>Poll not found</h1><p>Check the link with the organizer.</p><a href="#availability" className="primary-button">Create a poll</a></main>;
-  if(!poll)return <main className="not-found">{error?<Notice error>{error}</Notice>:<p role="status">Opening your poll…</p>}<a href="#availability" className="text-button">Back to new poll</a></main>;
+  if(poll===null)return <main className="not-found"><CalendarDays size={42}/><h1>Poll not found</h1><p>Check the link with the organizer.</p><a href={session?'#availability':'/'} className="primary-button">{session?'Create a poll':'Member sign in'}</a></main>;
+  if(!poll)return <main className="not-found">{error?<Notice error>{error}</Notice>:<p role="status">Opening your poll…</p>}<a href={session?'#availability':'/'} className="text-button">{session?'Back to new poll':'Member sign in'}</a></main>;
   return <main className="poll-page">
     {demo && <div className="demo-note"><Info size={17}/><span>Sample poll · Try marking your availability. Nothing here is shared or saved after a refresh.</span></div>}
-    <a className="back-link" href="#availability"><ArrowLeft size={15}/>Create another poll</a>
+    <a className="back-link" href={session?'#availability':'/'}><ArrowLeft size={15}/>{session?'Create another poll':'Member sign in'}</a>
     <div className="poll-heading"><div><div className="poll-status"><span className={closed?'status closed':'status'}>{closed?'TIME CHOSEN':'AVAILABILITY POLL'}</span><span>Organized by {poll.organizerName}</span></div><h1>{poll.title}</h1>{poll.description && <p>{poll.description}</p>}<div className="poll-meta"><span><Clock3 size={16}/>{poll.duration} minutes</span><span><Users size={16}/>{responses.length} {responses.length===1?'response':'responses'}</span><span><Globe2 size={16}/>{zoneName(poll.timezone)} when created</span></div></div><button className="primary-button" disabled={!!demo} title={demo?'Create a real poll to share it.':undefined} onClick={()=>setShare(true)}><Link2 size={18}/>Share poll</button></div>
     {owner && <div className="poll-actions"><button className="secondary-button" onClick={()=>setEditingTitle(true)}>Edit title</button><button className="secondary-button" disabled={dirty} title={dirty?'Save your availability before copying.':undefined} onClick={()=>setCopying(true)}><Copy size={17}/>Copy poll</button><button className="text-button" disabled={!!demo} onClick={()=>{try {const list=savedTemplates().filter(t=>t.id!==poll.id);localStorage.setItem('dc-meet-templates',JSON.stringify([...list,{id:poll.id,title:poll.title}]));notify('Template saved. Find it on the New poll page in this browser.');}catch {setError('Your browser could not save this template shortcut. Bookmark the poll link instead.');}}}>Save as template</button></div>}
     {responses.some(r=>r.copied) && <Notice>Copied availability is a starting point, not confirmation for these dates. Participants can review and save their response using their original browser.</Notice>}
     {error && mode!=='edit' && <Notice error>{error}</Notice>}
     {closed && <div className="chosen-banner"><div className="chosen-icon"><Check size={24}/></div><div><p>WE HAVE A TIME</p><h2>{slotLabel(poll.selectedStart,zone)}</h2><span>{poll.duration} minutes · The organizer will share any meeting details separately.</span></div>{owner && <button className="secondary-button" disabled={busy} onClick={reopen}><RotateCcw size={16}/>Reopen poll</button>}</div>}
     <div className="poll-layout">
-      <aside className="participants-card"><div className="participants-heading"><h2>Who's coming?</h2><span className="count-pill">{responses.length}</span></div><p className="muted">Names appear after members respond.</p><div className="participants-list">{responses.length===0?<div className="empty-people"><Users size={32}/><p>No responses yet.<br/>Be the first to add your times.</p></div>:responses.map((response,i)=><div className="participant" key={response.uid}><span className={`avatar avatar-${i%4}`}>{response.name.slice(0,1).toUpperCase()}</span><div><strong>{response.name}{response.uid===uid && <span className="you-label">you</span>}</strong><span>{response.available.length===0 && response.ifNeeded.length===0 ? 'No times available' : response.copied?'Copied · awaiting confirmation':'Availability added'}</span></div><Check size={15}/></div>)}</div><div className="participants-note"><LockKeyhole size={15}/><p>Names come from verified DC member accounts. Signed-in members with this link can see the responses.</p></div>{owner && <div className="owner-note">You’re the organizer for this poll.</div>}</aside>
+      <aside className="participants-card"><div className="participants-heading"><h2>Who's coming?</h2><span className="count-pill">{responses.length}</span></div><p className="muted">Names appear after people respond.</p><div className="participants-list">{responses.length===0?<div className="empty-people"><Users size={32}/><p>No responses yet.<br/>Be the first to add your times.</p></div>:responses.map((response,i)=>{const isGuest=response.participantType==='guest'||response.uid.startsWith('guest_');return <div className="participant" key={response.uid}><span className={`avatar avatar-${i%4}`}>{response.name.slice(0,1).toUpperCase()}</span><div><strong>{response.name}{response.uid===uid && <span className="you-label">you</span>}<span className={isGuest?'identity-label guest':'identity-label verified'}>{isGuest?'Guest':'Verified'}</span></strong><span>{response.available.length===0 && response.ifNeeded.length===0 ? 'No times available' : response.copied?'Copied · awaiting confirmation':'Availability added'}</span></div><Check size={15}/></div>})}</div><div className="participants-note"><LockKeyhole size={15}/><p>Verified names come from DC Central accounts. Guest names are entered by the guest. Anyone with this link can see responses.</p></div>{owner && <div className="owner-note">You’re the organizer for this poll.</div>}</aside>
       <section className="availability-card">
         <div className="availability-toolbar"><div className="view-tabs" role="tablist" aria-label="Availability view"><button role="tab" aria-selected={mode==='group'} onClick={()=>setMode('group')}>Group availability</button><button role="tab" aria-selected={mode==='edit'} disabled={closed} onClick={()=>setMode('edit')}>{mine?'Your availability':'Add your availability'}{dirty && <span className="unsaved-dot" aria-label="Unsaved changes"/>}</button></div><ZoneSelect id="view-zone" value={zone} onChange={setZone}/></div>
-        {mode==='edit'?<div className="edit-controls"><div className="name-field"><label htmlFor="participant-name">Responding as</label><input id="participant-name" readOnly value={name}/></div><div className="paint-tools"><span>Mark times as</span><div role="group" aria-label="Availability marker">{[['available','Available',Check],['needed','If needed',Clock3],['erase','Clear',Eraser]].map(([value,label,Icon])=><button className={`${value} ${tool===value?'active':''}`} aria-pressed={tool===value} key={value} onClick={()=>setTool(value)}><Icon size={15}/>{label}</button>)}</div></div></div>:<div className="grid-caption"><p>{responses.length?'Darker cells mean more people are available.':'Share your poll to start finding a time together.'}</p><div className="heat-legend"><span>Fewer</span>{[0,1,2,3,4].map(i=><i key={i} className={`heat-${i}`}/>)}<span>More</span><span className="needed-legend">Striped = if needed</span></div></div>}
+        {mode==='edit'?<div className="edit-controls"><div className="name-field"><label htmlFor="participant-name">Responding as</label><input id="participant-name" readOnly={Boolean(session)} maxLength={60} required value={name} onChange={e=>{setName(e.target.value);setDirty(true);}} placeholder="Enter your name"/>{!session&&!demo&&<small className="guest-field-note">This will be labeled as a guest response.</small>}</div><div className="paint-tools"><span>Mark times as</span><div role="group" aria-label="Availability marker">{[['available','Available',Check],['needed','If needed',Clock3],['erase','Clear',Eraser]].map(([value,label,Icon])=><button className={`${value} ${tool===value?'active':''}`} aria-pressed={tool===value} key={value} onClick={()=>setTool(value)}><Icon size={15}/>{label}</button>)}</div></div></div>:<div className="grid-caption"><p>{responses.length?'Darker cells mean more people are available.':'Share your poll to start finding a time together.'}</p><div className="heat-legend"><span>Fewer</span>{[0,1,2,3,4].map(i=><i key={i} className={`heat-${i}`}/>)}<span>More</span><span className="needed-legend">Striped = if needed</span></div></div>}
         <AvailabilityGrid poll={poll} responses={responses} mode={mode} values={values} paint={paint} tool={tool} zone={zone} selected={selectedResult?.start} onSelect={setSelected}/>
-        {mode==='edit'?<div className="save-bar">{error && <Notice error>{error}</Notice>}<div><span>{Object.keys(values).length} half-hour slots marked</span><p>Unmarked times mean unavailable. Tap cells, or click and drag.</p></div><button className="primary-button" type="button" disabled={busy} onClick={save}>{busy?'Saving…':mine?'Save changes':'Save availability'}<Check size={18}/></button><p className="browser-note">{demo ? "Preview only: your response lasts until you refresh this page." : "Your response is linked to your DC Central account, so you can edit it from another device."}</p></div>:<div className="grid-footer"><span><Info size={15}/>Tap a time to see who can attend the full {poll.duration} minutes.</span>{!closed && <button className="text-button" onClick={()=>setMode('edit')}>{mine?'Edit your response':'Add your availability'}<ArrowRight size={16}/></button>}</div>}
+        {mode==='edit'?<div className="save-bar">{error && <Notice error>{error}</Notice>}<div><span>{Object.keys(values).length} half-hour slots marked</span><p>Unmarked times mean unavailable. Tap cells, or click and drag.</p></div><button className="primary-button" type="button" disabled={busy} onClick={save}>{busy?'Saving…':mine?'Save changes':'Save availability'}<Check size={18}/></button><p className="browser-note">{demo ? "Preview only: your response lasts until you refresh this page." : session ? "Your response is linked to your DC Central account, so you can edit it from another device." : "This browser remembers your guest response so you can reopen this link and edit it here."}</p></div>:<div className="grid-footer"><span><Info size={15}/>Tap a time to see who can attend the full {poll.duration} minutes.</span>{!closed && <button className="text-button" onClick={()=>setMode('edit')}>{mine?'Edit your response':'Add your availability'}<ArrowRight size={16}/></button>}</div>}
       </section>
       {mode==='group' && <section className="results-section"><div className="results-heading"><div><p className="eyebrow">LET’S MAKE IT HAPPEN</p><h2>{closed?'Meeting availability':'Times that work best'}</h2></div><span className="muted">For the full {poll.duration}-minute meeting</span></div>{!responses.length?<div className="empty-results"><CalendarDays size={28}/><p>The best times will appear here as people respond.</p></div>:<div className="results-layout"><div className="best-times">{ranked.slice(0,4).map((result,i)=><button key={result.start} className={`best-time ${selectedResult?.start===result.start?'selected':''}`} onClick={()=>setSelected(result.start)}><span className="rank">{String(i+1).padStart(2,'0')}</span><span className="best-time-label"><strong>{slotTime(result.start,zone).toFormat('ccc, LLL d')}</strong><span>{slotTime(result.start,zone).toFormat('h:mm a')} – {slotTime(result.start,zone).plus({minutes:poll.duration}).toFormat('h:mm a')}</span></span><span className="match-score"><strong>{result.total}<span>/{responses.length}</span></strong><span>can make it</span></span></button>)}</div><div className="time-detail">{selectedResult?<><div className="time-detail-header"><CalendarDays size={20}/><div><h3>{slotLabel(selectedResult.start,zone)}</h3><p>{selectedResult.available} available{selectedResult.needed>0?` · ${selectedResult.needed} if needed`:''} · {responses.length-selectedResult.total} unavailable</p></div></div><div className="detail-people">{selectedResult.statuses.map(r=><span key={r.uid} className={`person-status ${r.availability}`}><i/>{r.name}<small>{r.availability==='available'?'Available':r.availability==='needed'?'If needed':'Unavailable'}</small></span>)}</div>{owner && !closed && <button className="primary-button choose-button" onClick={()=>setConfirm(true)}>Choose this time<ArrowRight size={17}/></button>}{!owner && <p className="muted">{poll.organizerName} can choose the final meeting time.</p>}</>:<p>No full meeting fits in the selected range.</p>}</div></div>}</section>}
     </div>
     {editingTitle && <EditTitle poll={poll} onClose={()=>setEditingTitle(false)} onSave={async title=>{if(demo)setPoll({...poll,title});else await data.renamePoll(poll,title);const list=savedTemplates();try {localStorage.setItem('dc-meet-templates',JSON.stringify(list.map(t=>t.id===poll.id?{...t,title}:t)));}catch {} setEditingTitle(false);notify('Meeting title updated.');}}/>}
     {copying && <CopyPoll poll={poll} responses={responses} onClose={()=>setCopying(false)} onCopy={async (title,dates)=>{if(demo){onDemoCopy(copyPollData(poll,responses,title,dates,'demo-owner'));setCopying(false);}else {const nextId=await data.duplicatePoll(poll,responses,title,dates,session);location.hash=`availability/poll/${nextId}`;}notify('Poll copied with the new dates.');}}/>}
-    {share && <Modal title="Invite everyone to the poll" onClose={()=>setShare(false)}><p>Send this link to your group. Signed-in DC members can add their availability.</p><label htmlFor="share-link">Poll link</label><div className="share-link"><input id="share-link" readOnly value={shareUrl} onFocus={e=>e.target.select()}/><button className="primary-button" onClick={copy}><Copy size={17}/>Copy</button></div><Notice>Signed-in members with the link can view names and availability. Only the organizer can choose the meeting time.</Notice></Modal>}
+    {share && <Modal title="Invite everyone to the poll" onClose={()=>setShare(false)}><p>Send this link to DC members or guests. Guests can enter their name and availability without creating an account.</p><label htmlFor="share-link">Poll link</label><div className="share-link"><input id="share-link" readOnly value={shareUrl} onFocus={e=>e.target.select()}/><button className="primary-button" onClick={copy}><Copy size={17}/>Copy</button></div><Notice>Anyone with the link can see participant names and availability. Guest responses are labeled, and only the organizer can choose the meeting time.</Notice></Modal>}
     {confirm && selectedResult && <Modal title="Choose this meeting time?" onClose={()=>setConfirm(false)}><div className="confirm-time"><CalendarDays size={26}/><strong>{slotLabel(selectedResult.start,zone)}</strong><span>{poll.duration} minutes</span></div><p>{selectedResult.total} of {responses.length} participants can make this time{selectedResult.needed?`, including ${selectedResult.needed} marked “If needed”`:''}.</p><p>Choosing a time closes responses. You can reopen the poll from your DC Central account. No invitations or emails are sent automatically.</p><div className="modal-actions"><button className="secondary-button" onClick={()=>setConfirm(false)}>Keep looking</button><button className="primary-button" disabled={busy} onClick={choose}>{busy?'Saving…':'Confirm time'}<Check size={17}/></button></div></Modal>}
   </main>;
 }

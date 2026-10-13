@@ -116,11 +116,12 @@ export function watchPoll(id, onPoll, onResponses, onError) {
   };
 }
 
-export async function saveResponse(poll, session, values) {
+export async function saveResponse(poll, identity, values) {
   await setDoc(
-    doc(db, "availabilityPolls", poll.id, "responses", session.profile.uid),
+    doc(db, "availabilityPolls", poll.id, "responses", identity.id),
     {
-      ...makeResponse(session.profile.displayName, values, poll),
+      ...makeResponse(identity.name, values, poll),
+      participantType: identity.participantType,
       updatedAt: serverTimestamp(),
     },
   );

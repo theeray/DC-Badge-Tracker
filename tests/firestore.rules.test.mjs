@@ -820,6 +820,7 @@ test("members submit only their own named availability", async () => {
         name: identities.mentee.displayName,
         available: dcMeetSlots.slice(0, 2),
         ifNeeded: [dcMeetSlots[2]],
+        participantType: "member",
         updatedAt: serverTimestamp(),
       },
     ),
@@ -848,6 +849,7 @@ test("members submit only their own named availability", async () => {
         name: identities.mentor2.displayName,
         available: dcMeetSlots.slice(0, 1),
         ifNeeded: [],
+        participantType: "member",
         updatedAt: serverTimestamp(),
       },
     ),
@@ -865,6 +867,7 @@ test("members submit only their own named availability", async () => {
         name: "A different person",
         available: dcMeetSlots.slice(0, 1),
         ifNeeded: [],
+        participantType: "member",
         updatedAt: serverTimestamp(),
       },
     ),
@@ -882,6 +885,7 @@ test("members submit only their own named availability", async () => {
         name: identities.mentee.displayName,
         available: [dcMeetSlots[0], "1790999999999"],
         ifNeeded: [],
+        participantType: "member",
         updatedAt: serverTimestamp(),
       },
     ),
@@ -953,6 +957,7 @@ test("copied DC Meet responses are created atomically and stay immutable", async
       name: identities.mentee.displayName,
       available: dcMeetSlots.slice(0, 2),
       ifNeeded: [],
+      participantType: "member",
       updatedAt: serverTimestamp(),
     },
   );
@@ -975,12 +980,66 @@ test("copied DC Meet responses are created atomically and stay immutable", async
   );
 });
 
-test("accounts without an active DC Central profile cannot use DC Meet", async () => {
+test("guests can read a shared poll and save a clearly labeled response", async () => {
+  const guestDb = environment.unauthenticatedContext().firestore();
+  const guestId = "guest_0123456789abcdef0123456789abcdef";
+  await assertSucceeds(
+    getDoc(doc(guestDb, "availabilityPolls", "mentor-weekly-meeting")),
+  );
+  await assertSucceeds(
+    getDocs(
+      collection(
+        guestDb,
+        "availabilityPolls",
+        "mentor-weekly-meeting",
+        "responses",
+      ),
+    ),
+  );
+  await assertSucceeds(
+    setDoc(
+      doc(
+        guestDb,
+        "availabilityPolls",
+        "mentor-weekly-meeting",
+        "responses",
+        guestId,
+      ),
+      {
+        name: "Visiting Photographer",
+        available: dcMeetSlots.slice(0, 2),
+        ifNeeded: [],
+        participantType: "guest",
+        updatedAt: serverTimestamp(),
+      },
+    ),
+  );
+  await assertFails(
+    setDoc(
+      doc(
+        guestDb,
+        "availabilityPolls",
+        "mentor-weekly-meeting",
+        "responses",
+        "guest-short",
+      ),
+      {
+        name: "Unlabeled Guest",
+        available: [],
+        ifNeeded: [],
+        participantType: "guest",
+        updatedAt: serverTimestamp(),
+      },
+    ),
+  );
+});
+
+test("accounts without an active DC Central profile can view links but cannot act as members", async () => {
   const outsiderDb = environment.authenticatedContext("outside-1", {
     email: "outside@example.edu",
     email_verified: true,
   }).firestore();
-  await assertFails(
+  await assertSucceeds(
     getDoc(doc(outsiderDb, "availabilityPolls", "mentor-weekly-meeting")),
   );
   await assertFails(

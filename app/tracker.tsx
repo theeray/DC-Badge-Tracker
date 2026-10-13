@@ -482,7 +482,9 @@ export default function Tracker() {
   const [session, setSession] = useState<AuthSession | null>(null);
   const [authReady, setAuthReady] = useState(false);
   const [sessionError, setSessionError] = useState("");
-  const [browsing, setBrowsing] = useState(false);
+  const [browsing, setBrowsing] = useState(() =>
+    /^#availability\/poll\/[a-zA-Z0-9_-]{10,64}$/.test(window.location.hash),
+  );
 
   useEffect(
     () =>
@@ -1255,7 +1257,7 @@ function TrackerWorkspace({
             <TimeTracker session={session} />
           ) : null}
 
-          {view === "dc-meet" && session ? (
+          {view === "dc-meet" ? (
             <Suspense fallback={<p className="empty-state">Opening DC Meet…</p>}>
               <DCAvailability session={session} />
             </Suspense>

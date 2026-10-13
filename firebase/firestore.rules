@@ -93,15 +93,18 @@ service cloud.firestore {
           'name',
           'available',
           'ifNeeded',
+          'participantType',
           'updatedAt'
         ])
         && request.resource.data.keys().hasAll([
           'name',
           'available',
           'ifNeeded',
+          'participantType',
           'updatedAt'
         ])
         && nonblank(request.resource.data.name, 60)
+        && request.resource.data.participantType in ['member', 'guest']
         && request.resource.data.available is list
         && request.resource.data.ifNeeded is list
         && request.resource.data.available.size() <= 672
@@ -610,7 +613,8 @@ service cloud.firestore {
     }
 
     match /availabilityPolls/{pollId} {
-      allow get: if activeUser();
+      // Poll IDs are unguessable invitation links. There is no public list.
+      allow get: if true;
       allow list: if false;
 
       allow create: if activeUser() && validAvailabilityPoll();
@@ -636,12 +640,17 @@ service cloud.firestore {
       allow delete: if false;
 
       match /responses/{uid} {
-        allow read: if activeUser()
-          && exists(availabilityPollPath(pollId));
+        allow read: if exists(availabilityPollPath(pollId));
 
-        allow create, update: if activeUser()
-          && request.auth.uid == uid
-          && request.resource.data.name == currentUser().displayName
+        allow create, update: if (
+            (activeUser()
+              && request.auth.uid == uid
+              && request.resource.data.name == currentUser().displayName
+              && request.resource.data.participantType == 'member')
+            || (!signedIn()
+              && uid.matches('guest_[a-f0-9]{32}')
+              && request.resource.data.participantType == 'guest')
+          )
           && availabilityPollData(pollId).status == 'open'
           && validAvailabilityResponse(pollId);
 
@@ -650,8 +659,7 @@ service cloud.firestore {
 
       // A copied response is an immutable starting point, not confirmation.
       match /copiedResponses/{uid} {
-        allow read: if activeUser()
-          && exists(availabilityPollPath(pollId));
+        allow read: if exists(availabilityPollPath(pollId));
 
         allow create: if activeUser()
           && !exists(availabilityPollPath(pollId))
@@ -662,15 +670,18 @@ service cloud.firestore {
             'name',
             'available',
             'ifNeeded',
+            'participantType',
             'updatedAt'
           ])
           && request.resource.data.keys().hasAll([
             'name',
             'available',
             'ifNeeded',
+            'participantType',
             'updatedAt'
           ])
           && nonblank(request.resource.data.name, 60)
+          && request.resource.data.participantType in ['member', 'guest']
           && request.resource.data.available is list
           && request.resource.data.ifNeeded is list
           && request.resource.data.available.size() <= 672
