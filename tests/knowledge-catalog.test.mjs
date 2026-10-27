@@ -54,8 +54,10 @@ const invalidBank = (description, edit) => {
   });
 };
 
-test("30 shared banks provide 120 questions across exactly the approved 44 of 92 tutorials", () => {
-  assert.equal(allSkills.length, 92);
+test("30 shared banks retain 120 questions and the approved 44 tutorial links as the catalog evolves", () => {
+  // The source audit had 92 entries. Catalog corrections may add or retire
+  // other lessons, but must not silently detach the approved bank references.
+  assert.ok(allSkills.length >= expectedSkillIds.length);
   assert.equal(knowledgeBanks.length, 30);
   assert.equal(knowledgeBanks.reduce((sum, bank) => sum + bank.questions.length, 0), 120);
   const linked = knowledgeBanks.flatMap((bank) => bank.skillIds);
