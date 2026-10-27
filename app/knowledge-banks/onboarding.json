@@ -1,0 +1,142 @@
+[
+  {
+    "id": "kc-work-study",
+    "title": "Check Work-Study Eligibility",
+    "version": 1,
+    "skillIds": ["on-work-study-eligibility"],
+    "sourceUrl": "https://www.iorad.com/player/2450841/Check-to-see-if-you-are-eligible-for-Work-Study---Payroll-at-Bemidji-State-University",
+    "scope": "Confirming eligibility and following the appropriate student employment pathway. Use hypothetical examples; do not enter financial aid or account information.",
+    "questions": [
+      {"id": "q1", "prompt": "A new hire does not know whether they qualify for work study. Who does this tutorial direct them to contact, and what should they ask?", "topic": "Eligibility confirmation"},
+      {"id": "q2", "prompt": "The hire sees an ineligible message in e-services. Why should they not treat that screen alone as a final eligibility decision?", "topic": "Interpreting e-services"},
+      {"id": "q3", "prompt": "The financial aid screen says more FAFSA information is needed. What related account or status should the hire check? Do not share any personal status in your response.", "topic": "Financial aid follow-up"},
+      {"id": "q4", "prompt": "A hire confirms they are not eligible for work study. Does that automatically rule out all student employment? Explain the alternative payroll pathway described in the tutorial.", "topic": "Work study and regular payroll"}
+    ]
+  },
+  {
+    "id": "kc-payroll",
+    "title": "Work Study & Payroll Paperwork",
+    "version": 1,
+    "skillIds": ["on-payroll"],
+    "sourceUrl": "https://www.iorad.com/player/2432928/Fill-Out-Work-Study---Payroll-Paperwork-for-Digital-Corps",
+    "scope": "Finding, preparing, checking, and submitting the student employment form. Confirm current department amounts, dates, routing, and supervisor information with a director; do not enter personal payroll data here.",
+    "questions": [
+      {"id": "q1", "prompt": "Before selecting Work Study or Regular Payroll on the employment form, what should a new hire confirm?", "topic": "Selecting the payroll category"},
+      {"id": "q2", "prompt": "The payroll PDF cannot be edited in the browser. Describe how the tutorial gets an editable copy ready and makes the saved file identifiable.", "topic": "Preparing the form"},
+      {"id": "q3", "prompt": "Describe the different kinds of information entered in Sections A, B, and C. Do not include real names, award amounts, IDs, dates, or other personal values.", "topic": "Form sections"},
+      {"id": "q4", "prompt": "You have drafted the approval email and attached the form. What should you check before sending, and what should you do if you still cannot submit hours after a few days?", "topic": "Submission and follow-up"}
+    ]
+  },
+  {
+    "id": "kc-file-organization",
+    "title": "File Organization Guide",
+    "version": 1,
+    "skillIds": ["on-files"],
+    "sourceUrl": "https://dc-central.web.app/resources/onboarding/file-organization-guide.pdf",
+    "scope": "Shared working files, project organization, annual archives, and brand resources. Folder names may change; assess organization principles rather than exact current Teams labels.",
+    "questions": [
+      {"id": "q1", "prompt": "You are revising an assigned poster over several days. How should the project and its working versions be organized so another DC member can locate them?", "topic": "Working files and versions"},
+      {"id": "q2", "prompt": "How does the guide distinguish current-year work from previous years' content, and why would you look in a previous-year collection?", "topic": "Annual archives"},
+      {"id": "q3", "prompt": "You need an official university logo and typeface rather than a logo copied from the web. Which kind of shared resources should you look for? How are university and Digital Corps resources distinguished?", "topic": "Brand resource organization"},
+      {"id": "q4", "prompt": "The DC website has new copy and a new project video. According to the guide, what should happen to the shared website-content collection, and why?", "topic": "Maintaining website content"}
+    ]
+  },
+  {
+    "id": "kc-payroll-hours",
+    "title": "Enter Submitted Payroll Hours",
+    "version": 1,
+    "skillIds": ["on-hours"],
+    "sourceUrl": "https://dc-central.web.app/resources/onboarding/enter-work-hours-steps.docx",
+    "scope": "Official payroll submission through e-services, distinct from the DC Central internal time clock. Use an imaginary shift only; do not enter actual payroll data.",
+    "questions": [
+      {"id": "q1", "prompt": "The guide begins at BSU e-services. Which student-employment area and action lead toward adding a work-time entry? Exact screen positions are not required.", "topic": "Finding payroll time entry"},
+      {"id": "q2", "prompt": "For an imaginary shift, what two kinds of information does the guide ask you to record in the time entry?", "topic": "Recording the work"},
+      {"id": "q3", "prompt": "After entering the shift, what confirmation and submission actions are still needed? Why is entering text alone not the end of the process?", "topic": "Certification and submission"},
+      {"id": "q4", "prompt": "You stopped the internal timer in DC Central. Does that alone show that you followed this official payroll-submission guide? Explain the distinction.", "topic": "Internal time versus payroll"}
+    ]
+  },
+  {
+    "id": "kc-primary-contact",
+    "title": "How to Make Primary Contact",
+    "version": 1,
+    "skillIds": ["on-primary", "sm-primary", "lead-primary"],
+    "sourceUrl": "https://www.iorad.com/player/2433316/Social-Media-Campaign-1--How-to-Make-First-Contact",
+    "scope": "Using and personalizing the supplied first-contact email template, checking attachments, and seeking review. The lesson's older social-media assignment does not authorize a new outreach campaign; confirm current recipients and responsibilities with a director.",
+    "questions": [
+      {"id": "q1", "prompt": "You opened the shared first-contact email template. How should you reuse its text without damaging the template for other students?", "topic": "Protecting the shared template"},
+      {"id": "q2", "prompt": "Which parts of the copied message should you personalize and check before treating it as a finished email?", "topic": "Personalizing the message"},
+      {"id": "q3", "prompt": "The source workflow includes two supporting files with the first-contact email. What are the files, and what attachment check should you make?", "topic": "Supporting attachments"},
+      {"id": "q4", "prompt": "Your first-contact draft is ready. What review step does the tutorial require before sending it to the external school contact?", "topic": "Approval before outreach"}
+    ]
+  },
+  {
+    "id": "kc-client-meetings",
+    "title": "Client Meeting Checklist",
+    "version": 1,
+    "skillIds": ["on-meeting", "sm-meeting", "lead-meeting"],
+    "sourceUrl": "https://dc-central.web.app/resources/onboarding/client-meeting-checklist.docx",
+    "scope": "Preparing for a client meeting, asking permission to record, and following up. Assess the workflow, not the guide's older scheduling or transcription tool names; use current director-approved tools.",
+    "questions": [
+      {"id": "q1", "prompt": "You have a first meeting with a client tomorrow. Identify three preparations from the checklist that would help you arrive ready to discuss the work.", "topic": "Meeting preparation"},
+      {"id": "q2", "prompt": "You want a recording to help write accurate notes. What must happen before you record, and what should you do if the client does not agree?", "topic": "Recording consent"},
+      {"id": "q3", "prompt": "During the meeting, the client changes a deadline and agrees to a new deliverable. What should you update afterward so the team can act on that decision?", "topic": "Action items and deadlines"},
+      {"id": "q4", "prompt": "What should a follow-up to the primary contact accomplish after the meeting, rather than simply saying that the meeting happened?", "topic": "Client follow-up"}
+    ]
+  },
+  {
+    "id": "kc-dc-brand",
+    "title": "Use Digital Corps Brand Guide",
+    "version": 1,
+    "skillIds": ["on-brand", "sm-dc-brand"],
+    "sourceUrl": "https://dc-central.web.app/downloads/digital-corps/digital-corps-brand-guide.pdf",
+    "scope": "The supplied Digital Corps guide: official marks, clear space, primary and supporting colors, primary typeface, and supplied design elements. No question depends on the guide's ambiguous secondary-typeface name.",
+    "questions": [
+      {"id": "q1", "prompt": "The guide provides more than one DC logo treatment. Name the three kinds shown and explain how you would choose one without inventing a new mark.", "topic": "Official logo choices"},
+      {"id": "q2", "prompt": "A logo is crowded by a heading and nearby graphics. Which logo-usage consideration in the guide should you check before approving the layout?", "topic": "Clear space"},
+      {"id": "q3", "prompt": "Identify the two primary green treatments and two supporting colors in the supplied DC palette. Color names are enough; numeric codes are not required.", "topic": "Brand palette"},
+      {"id": "q4", "prompt": "You are styling a DC heading and decorative background. Which primary typeface and design-element source should you consult to keep them consistent with the supplied brand system?", "topic": "Typography and design elements"}
+    ]
+  },
+  {
+    "id": "kc-creative-briefs",
+    "title": "Creative Briefs",
+    "version": 1,
+    "skillIds": ["on-briefs", "on-make-brief", "sm-briefs", "sm-make-brief"],
+    "sourceUrl": "https://www.iorad.com/player/2447654/Editing-a-Digital-Corps-Creative-Brief",
+    "scope": "Locating, copying, naming, and editing the supplied Teams creative-brief document. This check does not assess a full creative strategy lesson or authorize social-media account management.",
+    "questions": [
+      {"id": "q1", "prompt": "Describe how the tutorial obtains a working copy of the creative brief from the shared Teams resources before editing it.", "topic": "Obtaining a working copy"},
+      {"id": "q2", "prompt": "After opening the brief, how does the tutorial make the saved copy identifiable for the particular school or project?", "topic": "Naming and saving the copy"},
+      {"id": "q3", "prompt": "What information does the tutorial enter in the first box, and how does it distinguish the information the student adds while working through the brief?", "topic": "Entering information clearly"},
+      {"id": "q4", "prompt": "You have filled in the information you know. What file action is needed before closing the document, and how would you check that your work was retained?", "topic": "Saving the completed work"}
+    ]
+  },
+  {
+    "id": "kc-bsu-brand",
+    "title": "BSU Branding Guide",
+    "version": 1,
+    "skillIds": ["on-bsu-brand", "sm-bsu"],
+    "sourceUrl": "https://dc-central.web.app/downloads/bsu-academics/bsu-brand-guide-2020.pdf",
+    "scope": "The supplied BSU academic identity guide, not the athletics system. Check current university guidance before releasing client work; this knowledge check is tied to the supplied edition.",
+    "questions": [
+      {"id": "q1", "prompt": "In the supplied academic guide, which two colors lead the identity, and how should the secondary palette relate to them?", "topic": "Primary and secondary colors"},
+      {"id": "q2", "prompt": "A poster designer stretched the university logo, added a drop shadow, and changed it to a secondary palette color. Identify the problems using the supplied guide.", "topic": "Protecting the logo"},
+      {"id": "q3", "prompt": "You want to reverse the academic logo out of a colored background. What color restriction does this edition give, and what other legibility issue should you check?", "topic": "Reversed logos and legibility"},
+      {"id": "q4", "prompt": "Which type family is primary and which is secondary in the supplied BSU academic guide? Why should you consult the academic guide rather than an athletics logo package for this job?", "topic": "Academic typography and identity"}
+    ]
+  },
+  {
+    "id": "kc-tad-brand",
+    "title": "TAD Branding Guide",
+    "version": 1,
+    "skillIds": ["on-tad-brand", "sm-tad"],
+    "sourceUrl": "https://dc-central.web.app/downloads/tad/tad-brand-guidelines-2024.pdf",
+    "scope": "The supplied 2024 TAD guide: official logo variants, Futura PT, pillar colors, and readable text treatment. Exact Arts Red numeric codes are excluded because the guide has inconsistent values.",
+    "questions": [
+      {"id": "q1", "prompt": "Identify the primary TAD logo treatments and the two kinds of secondary treatment shown in the guide.", "topic": "Official TAD marks"},
+      {"id": "q2", "prompt": "Which typeface family does the guide specify? Name two of the weights or styles shown.", "topic": "TAD typography"},
+      {"id": "q3", "prompt": "Name any four TAD pillars and match each to the color name shown in the guide. Numeric color codes are not required.", "topic": "Pillar colors"},
+      {"id": "q4", "prompt": "A designer uses small white text on every pillar-colored background. What does the guide recommend instead, and why should the actual text/background contrast still be checked?", "topic": "Readable text and contrast"}
+    ]
+  }
+]

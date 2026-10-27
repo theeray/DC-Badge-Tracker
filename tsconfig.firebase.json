@@ -30,6 +30,9 @@
     "app/onboarding-hub.tsx",
     "app/skills-dashboard.tsx",
     "app/time-tracker.tsx",
+    "app/knowledge-catalog.ts",
+    "app/knowledge-firebase.ts",
+    "app/knowledge-checks.tsx",
     "app/tracker.tsx",
     "firebase.vite.config.ts"
   ]

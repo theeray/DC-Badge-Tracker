@@ -1,0 +1,142 @@
+[
+  {
+    "id": "kc-indesign-presentation",
+    "title": "Make a Digital Presentation with InDesign",
+    "version": 1,
+    "skillIds": ["on-presentation", "sm-presentation"],
+    "sourceUrl": "https://www.iorad.com/player/2607783/Make-a-Digital-Presentation-with-InDesign",
+    "scope": "Screen-oriented layout, guides, reusable type hierarchy, previewing, and interactive PDF delivery from the supplied presentation lesson.",
+    "questions": [
+      {"id": "q1", "prompt": "Your portrait branding board needs to become a landscape presentation. How would you adapt its content for readable slides?", "topic": "Screen layout"},
+      {"id": "q2", "prompt": "How would you keep headline and subheading formatting consistent across eight pages?", "topic": "Type hierarchy"},
+      {"id": "q3", "prompt": "How can you preview the presentation full-screen and return to editing?", "topic": "Presentation preview"},
+      {"id": "q4", "prompt": "What PDF export type does this screen-presentation lesson use, and what should you review before sharing it?", "topic": "Digital delivery"}
+    ]
+  },
+  {
+    "id": "kc-cost-estimator",
+    "title": "Fill out TAD Costing Estimator",
+    "version": 1,
+    "skillIds": ["on-costing", "sm-costing"],
+    "sourceUrl": "https://www.iorad.com/player/2477485/Fill-out-the-TAD-Costing-FORM",
+    "scope": "Estimate versus job request, material measurements, project milestones, and reviewing the emailed estimate. No personal or payment details are requested in this check.",
+    "questions": [
+      {"id": "q1", "prompt": "You submitted the costing form and need DC to design or print the project. Has a job been requested? Explain the next step.", "topic": "Estimate versus job request"},
+      {"id": "q2", "prompt": "What material information must you check so the estimate is based on the correct quantity?", "topic": "Materials and units"},
+      {"id": "q3", "prompt": "What is the difference between the review-by date and the final-delivery date?", "topic": "Project milestones"},
+      {"id": "q4", "prompt": "Where does the calculated estimate arrive, and what would you review before including it in a job request?", "topic": "Estimate verification"}
+    ]
+  },
+  {
+    "id": "kc-indesign-spellcheck",
+    "title": "Spellcheck: InDesign",
+    "version": 1,
+    "skillIds": ["on-id-spell"],
+    "sourceUrl": "https://design.tutsplus.com/tutorials/how-to-use-spell-check-in-indesign--cms-34380",
+    "scope": "The publisher's written lesson: spellcheck scope, correction choices, dictionary handling, and Dynamic Spelling. This is not an accessed video transcript.",
+    "questions": [
+      {"id": "q1", "prompt": "How would you start a spelling check for one selected text frame rather than the whole document?", "topic": "Check scope"},
+      {"id": "q2", "prompt": "A suggested spelling correction changes the intended word. What should you do instead of accepting it automatically?", "topic": "Correction judgment"},
+      {"id": "q3", "prompt": "InDesign flags a correctly spelled client acronym. What option can prevent repeated flags after you verify it?", "topic": "Dictionary decisions"},
+      {"id": "q4", "prompt": "What does Dynamic Spelling display, and does a marking necessarily mean a word is wrong?", "topic": "Dynamic Spelling"}
+    ]
+  },
+  {
+    "id": "kc-headline-capitalization",
+    "title": "Headline Capitalization Check",
+    "version": 1,
+    "skillIds": ["on-headline"],
+    "sourceUrl": "https://capitalizemytitle.com/",
+    "scope": "Choosing the requested style and case, converting a headline, and checking the output. No single DC house style is assumed.",
+    "questions": [
+      {"id": "q1", "prompt": "Before converting a client's headline, how would you decide which capitalization style to select?", "topic": "Style selection"},
+      {"id": "q2", "prompt": "How does title case differ from sentence case?", "topic": "Case choices"},
+      {"id": "q3", "prompt": "Describe the basic workflow for converting a headline and bringing it back into your design.", "topic": "Conversion workflow"},
+      {"id": "q4", "prompt": "Two style tabs produce different capitalization. How would you decide which result to use?", "topic": "Output review"}
+    ]
+  },
+  {
+    "id": "kc-indesign-pdf",
+    "title": "Export InDesign to PDF",
+    "version": 1,
+    "skillIds": ["cc-export-pdf"],
+    "sourceUrl": "https://www.iorad.com/player/2262007/Export-InDesign-Documents-as-PDF-Spreads--TAD-ZINES-",
+    "scope": "The supplied TAD zine/spreads export workflow, including checking the layout, naming, requested marks and bleed, and verifying exported files. Settings are not universal print requirements.",
+    "questions": [
+      {"id": "q1", "prompt": "What should you inspect and fix in the InDesign layout before exporting?", "topic": "Pre-export review"},
+      {"id": "q2", "prompt": "Which export command and PDF type are used in this print/zine lesson?", "topic": "Export workflow"},
+      {"id": "q3", "prompt": "The client asks for both a clean review PDF and a version with crop marks and bleed. How would you handle the exports?", "topic": "Delivery specifications"},
+      {"id": "q4", "prompt": "After export completes, what would you do before telling the client the PDFs are ready?", "topic": "Output verification"}
+    ]
+  },
+  {
+    "id": "kc-indesign-package",
+    "title": "Package InDesign Files",
+    "version": 1,
+    "skillIds": ["cc-package-id"],
+    "sourceUrl": "https://dc-central.web.app/resources/onboarding/indesign-package-guide.pdf",
+    "scope": "Linked assets, preflight, permitted font collection, packaging, and checking a complete editable handoff. Font licensing and project-specific output requirements still apply.",
+    "questions": [
+      {"id": "q1", "prompt": "A teammate receives only your INDD file and sees missing images. Why can that happen?", "topic": "Linked assets"},
+      {"id": "q2", "prompt": "What is preflight, and name two problems you should resolve before handing off the document?", "topic": "Preflight"},
+      {"id": "q3", "prompt": "How do you start packaging, and what supporting assets should you collect when permitted?", "topic": "Packaging workflow"},
+      {"id": "q4", "prompt": "What would you inspect in the resulting package before sending it to another designer?", "topic": "Handoff verification"}
+    ]
+  },
+  {
+    "id": "kc-poster-design",
+    "title": "Poster Design",
+    "version": 1,
+    "skillIds": ["cc-poster-design", "cc-make-poster"],
+    "sourceUrl": "https://www.iorad.com/player/2467747/Make-an-Anatomy-of-Type-Poster",
+    "scope": "The Anatomy-of-Type Illustrator exercise: organized layers, meaningful type-anatomy guides, highlights and labels, and editable plus review-file delivery.",
+    "questions": [
+      {"id": "q1", "prompt": "Why lock the background layer before selecting and editing the poster's lines and letterforms?", "topic": "Layer organization"},
+      {"id": "q2", "prompt": "Where should the x-height guide align, rather than simply placing it halfway between the other guides?", "topic": "Type anatomy"},
+      {"id": "q3", "prompt": "What should you check so a highlighted letterform feature and its arrow or label are understandable?", "topic": "Visual explanation"},
+      {"id": "q4", "prompt": "Which two file formats does this exercise request, and what purpose does each serve?", "topic": "Exercise handoff"}
+    ]
+  },
+  {
+    "id": "kc-mockup-templates",
+    "title": "Mockup Templates",
+    "version": 1,
+    "skillIds": ["cc-mockups"],
+    "sourceUrl": "https://www.iorad.com/player/2428157/Use-a-Mockup-Template",
+    "scope": "Replacing artwork through a Photoshop template's editable design layer, updating the mockup, evaluating shading, and preparing a client PDF.",
+    "questions": [
+      {"id": "q1", "prompt": "How do you identify and open the mockup layer intended for your artwork?", "topic": "Editable design layer"},
+      {"id": "q2", "prompt": "Your pasted design appears in the editing tab but not the original mockup. What step is needed?", "topic": "Updating the mockup"},
+      {"id": "q3", "prompt": "The template's shading texture changes your artwork too strongly. What adjustments would you evaluate?", "topic": "Mockup appearance"},
+      {"id": "q4", "prompt": "What is the trade-off when turning off Preserve Photoshop Editing Capabilities in the PDF export?", "topic": "PDF delivery"}
+    ]
+  },
+  {
+    "id": "kc-stickers",
+    "title": "Stickers / HP 330-335 Print and Cut",
+    "version": 1,
+    "skillIds": ["cc-stickers", "cc-hp-printers"],
+    "sourceUrl": "https://sites.google.com/view/tad-tutorials/hp-330-335-printers?authuser=1",
+    "scope": "The linked TAD HP/Graphtec lessons: vector cut paths, registration, print-file preparation, and cutter setup concepts. Passing is not authorization for unsupervised machine operation.",
+    "questions": [
+      {"id": "q1", "prompt": "How is the vector cut path different from the sticker artwork, and why must they align?", "topic": "Artwork and cut paths"},
+      {"id": "q2", "prompt": "What is the purpose of registration marks in this print-and-cut workflow?", "topic": "Registration"},
+      {"id": "q3", "prompt": "What happens to the grouped cut-path outlines when making the print PDF, and when cutting?", "topic": "Print versus cut preparation"},
+      {"id": "q4", "prompt": "Before sending the cutter job, what alignment and registration setup should you verify with a trained supervisor?", "topic": "Supervised cutter checks"}
+    ]
+  },
+  {
+    "id": "kc-scan-artwork",
+    "title": "Scan Artwork",
+    "version": 1,
+    "skillIds": ["cc-scan"],
+    "sourceUrl": "https://www.iorad.com/player/2546410/Scan-Artwork-in-TAD",
+    "scope": "TAD scanning workflow: color, resolution, artwork placement, destination, finishing a job, and handling oversized artwork.",
+    "questions": [
+      {"id": "q1", "prompt": "Which color mode and minimum resolution does this lesson recommend for color artwork?", "topic": "Scan settings"},
+      {"id": "q2", "prompt": "If you plan to enlarge a scan, how should that affect your resolution choice?", "topic": "Intended use"},
+      {"id": "q3", "prompt": "How do you place the artwork, choose the destination, and finish the job so the scans are sent?", "topic": "Scan and send"},
+      {"id": "q4", "prompt": "What workflow does the lesson suggest when the artwork is too large for one scan?", "topic": "Oversized artwork"}
+    ]
+  }
+]

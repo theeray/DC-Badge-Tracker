@@ -784,6 +784,7 @@ function dcMeetPoll(identity, overrides = {}) {
 
 test("active DC members can create account-owned DC Meet polls", async () => {
   const mentorDb = authenticated(identities.mentor);
+  const menteeDb = authenticated(identities.mentee);
   await assertSucceeds(
     setDoc(
       doc(mentorDb, "availabilityPolls", "mentor-weekly-meeting"),

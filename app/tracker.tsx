@@ -21,6 +21,8 @@ import SkillsDashboard from "./skills-dashboard";
 import TimeTracker from "./time-tracker";
 
 const DCAvailability = lazy(() => import("./dc-availability"));
+const KnowledgeChecks = lazy(() => import("./knowledge-checks"));
+import { getKnowledgeBankForSkill } from "./knowledge-catalog";
 import {
   allSkills,
   getSkillResources,
@@ -668,6 +670,7 @@ function TrackerWorkspace({
   const [undoAction, setUndoAction] = useState<UndoAction | null>(null);
   const [undoBusy, setUndoBusy] = useState(false);
   const [tourStep, setTourStep] = useState<number | null>(null);
+  const [knowledgeSkillId, setKnowledgeSkillId] = useState<string | undefined>();
   const [syncState, setSyncState] = useState<"loading" | "saved" | "guest" | "error">(
     role === "guest" ? "guest" : "loading",
   );
@@ -1185,6 +1188,11 @@ function TrackerWorkspace({
             </button>
           ) : null}
           {session ? (
+            <button className={view === "knowledge-checks" ? "active" : ""} onClick={() => { setKnowledgeSkillId(undefined); setActiveView("knowledge-checks"); }}>
+              <span className="nav-index" aria-hidden="true"><ClipboardCheck /></span><span>Knowledge checks</span>
+            </button>
+          ) : null}
+          {session ? (
             <button data-tour="team" className={view === "skills-dashboard" ? "active" : ""} onClick={() => setActiveView("skills-dashboard")}>
               <span className="nav-index" aria-hidden="true"><Users /></span><span>{role === "mentee" ? "Mentor skills" : "Team directory"}</span>
             </button>
@@ -1400,6 +1408,15 @@ function TrackerWorkspace({
             <MemberDevelopment session={session} onOpenSkill={setActiveView} />
           ) : null}
 
+          {view === "knowledge-checks" && session ? (
+            <Suspense fallback={<p className="empty-state">Opening knowledge checks…</p>}>
+              <KnowledgeChecks key={`${session.profile.uid}_${knowledgeSkillId ?? "all"}`} session={session} initialSkillId={knowledgeSkillId} onOpenSkill={(skillId) => {
+                const skill = allSkills.find((item) => item.id === skillId);
+                if (skill) setActiveView(skill.area);
+              }} />
+            </Suspense>
+          ) : null}
+
           {view === "skills-dashboard" && session ? (
             <SkillsDashboard session={session} />
           ) : null}
@@ -1546,6 +1563,12 @@ function TrackerWorkspace({
                         </div>
                         <h3>{item.title}</h3>
                         <SkillResource item={item} />
+                        {session && getKnowledgeBankForSkill(item.id) ? (
+                          <button type="button" className="resource-link knowledge-check-link" onClick={() => {
+                            setKnowledgeSkillId(item.id);
+                            setActiveView("knowledge-checks");
+                          }}>Knowledge check →</button>
+                        ) : null}
                       </div>
                       <EndorsementStack count={endorsements[item.id] ?? 0} />
                       <div className="skill-action">
@@ -1833,6 +1856,9 @@ function TrackerWorkspace({
           ) : null}
           {session ? (
             <button data-tour="assigned" className={view === "member-development" ? "active" : ""} onClick={() => setActiveView("member-development")}><span className="mobile-nav-icon" aria-hidden="true"><Medal /></span>Assigned</button>
+          ) : null}
+          {session ? (
+            <button className={view === "knowledge-checks" ? "active" : ""} onClick={() => { setKnowledgeSkillId(undefined); setActiveView("knowledge-checks"); }}><span className="mobile-nav-icon" aria-hidden="true"><ClipboardCheck /></span>Checks</button>
           ) : null}
           {session ? (
             <button data-tour="team" className={view === "skills-dashboard" ? "active" : ""} onClick={() => setActiveView("skills-dashboard")}><span className="mobile-nav-icon" aria-hidden="true"><Users /></span>{role === "mentee" ? "Mentors" : "Team"}</button>

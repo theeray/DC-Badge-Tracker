@@ -13,10 +13,11 @@
     "deploy:firebase:central": "npm run test && npx --yes firebase-tools@15.28.2 deploy --only hosting:central --config firebase.central-hosting.json --project digital-corps-badge-tracker",
     "deploy:firebase:short": "npm run test && npx --yes firebase-tools@15.28.2 deploy --only hosting:short --config firebase.short-hosting.json --project digital-corps-badge-tracker",
     "preview": "vite preview --config firebase.vite.config.ts",
-    "test": "npm run test:catalog && npm run test:availability && npm run build",
+    "test": "npm run test:catalog && npm run test:knowledge && npm run test:availability && npm run build",
     "test:catalog": "node --experimental-strip-types --test tests/tutorial-catalog.test.mjs",
+    "test:knowledge": "node --experimental-strip-types --test tests/knowledge-catalog.test.mjs",
     "test:availability": "node --test tests/availability-scheduling.test.mjs",
-    "test:rules": "npx --yes firebase-tools@15.28.2 emulators:exec --project digital-corps-badge-tracker-rules-test --only firestore \"node --test tests/firestore.rules.test.mjs\"",
+    "test:rules": "npx --yes firebase-tools@15.28.2 emulators:exec --project digital-corps-badge-tracker-rules-test --only firestore \"node --test tests/firestore.rules.test.mjs tests/knowledge-rules.test.mjs\"",
     "typecheck:firebase": "tsc --project tsconfig.firebase.json"
   },
   "dependencies": {

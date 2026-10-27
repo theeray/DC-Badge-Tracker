@@ -1,5 +1,20 @@
 rules_version = '2';
 
+// Knowledge checks (all new records are immutable; corrections use a new version
+// or review revision, never overwrite a previous answer or grading decision):
+// knowledgeBanks/{bankId}_v{version}: bankId slug<=80, version int1..1000,
+//   title<=160, skillIds1..10 strings<=100, sourceUrl HTTPS<=1000, scope<=1600,
+//   questions {q1..q4:{prompt<=1000,topic<=100}}, createdBy UID, createdAt timestamp.
+// knowledgeGuides/{bankKey}: bankId,version, questions {q1..q4:{expectedAnswer<=3000,
+//   explanation<=2000,studentFeedback<=1000,practiceTask<=1500}},createdBy,createdAt.
+//   Private to verified active mentors/directors; never mixed into learner docs.
+// knowledgeAttempts/{ownerUid}/submissions/{attemptId}: ownerId,ownerRole snapshot,
+//   bankKey,bankId,version,skillId,answers{q1..q4:nonblank<=2000},createdAt.
+// .../reviews/{reviewId}: reviewerId,reviewerName<=160,verdicts{q1..q4:enum},
+//   feedback{q1..q4:string<=1000},practiceTasks{q1..q4:string<=1500},summary<=1500,
+//   score0..4 matching verdict count,createdAt,status graded|voided,reason<=500.
+// These paths intentionally add no permissions to existing account/progress docs.
+
 service cloud.firestore {
   match /databases/{database}/documents {
     function signedIn() {
@@ -153,6 +168,179 @@ service cloud.firestore {
 
     function isStudentWorker() {
       return activeUser() && currentUser().role in ['mentee', 'mentor'];
+    }
+
+    function knowledgeMember() {
+      return verifiedEmail() && activeUser();
+    }
+
+    function knowledgeBankPath(bankKey) {
+      return /databases/$(database)/documents/knowledgeBanks/$(bankKey);
+    }
+
+    function knowledgeAttemptPath(ownerUid, attemptId) {
+      return /databases/$(database)/documents/knowledgeAttempts/$(ownerUid)/submissions/$(attemptId);
+    }
+
+    function knowledgeString(value, maximum) {
+      return value is string && value.size() <= maximum;
+    }
+
+    function knowledgeNonblank(value, maximum) {
+      return knowledgeString(value, maximum) && value.size() > 0
+        && value.matches('(?s).*\\S.*');
+    }
+
+    function knowledgeFourKeys(value) {
+      return value is map && value.keys().hasAll(['q1', 'q2', 'q3', 'q4'])
+        && value.keys().hasOnly(['q1', 'q2', 'q3', 'q4']);
+    }
+
+    function knowledgeQuestion(value) {
+      return value is map && value.keys().hasAll(['prompt', 'topic'])
+        && value.keys().hasOnly(['prompt', 'topic'])
+        && knowledgeNonblank(value.prompt, 1000) && knowledgeNonblank(value.topic, 100);
+    }
+
+    function knowledgeGuideQuestion(value) {
+      return value is map
+        && value.keys().hasAll(['expectedAnswer', 'explanation', 'studentFeedback', 'practiceTask'])
+        && value.keys().hasOnly(['expectedAnswer', 'explanation', 'studentFeedback', 'practiceTask'])
+        && knowledgeNonblank(value.expectedAnswer, 3000)
+        && knowledgeNonblank(value.explanation, 2000)
+        && knowledgeNonblank(value.studentFeedback, 1000)
+        && knowledgeNonblank(value.practiceTask, 1500);
+    }
+
+    function knowledgeSkillIds(value) {
+      return value is list && value.size() > 0 && value.size() <= 10
+        && value.toSet().size() == value.size()
+        && knowledgeNonblank(value[0], 100)
+        && (value.size() < 2 || knowledgeNonblank(value[1], 100))
+        && (value.size() < 3 || knowledgeNonblank(value[2], 100))
+        && (value.size() < 4 || knowledgeNonblank(value[3], 100))
+        && (value.size() < 5 || knowledgeNonblank(value[4], 100))
+        && (value.size() < 6 || knowledgeNonblank(value[5], 100))
+        && (value.size() < 7 || knowledgeNonblank(value[6], 100))
+        && (value.size() < 8 || knowledgeNonblank(value[7], 100))
+        && (value.size() < 9 || knowledgeNonblank(value[8], 100))
+        && (value.size() < 10 || knowledgeNonblank(value[9], 100));
+    }
+
+    function knowledgeBankIdentity(data, bankKey) {
+      return knowledgeNonblank(data.bankId, 80)
+        && data.bankId.matches('[a-z0-9]+(-[a-z0-9]+)*')
+        && data.version is int && data.version >= 1 && data.version <= 1000
+        && bankKey == data.bankId + '_v' + string(data.version);
+    }
+
+    function validKnowledgeBank(bankKey) {
+      let data = request.resource.data;
+      return data.keys().hasAll(['bankId', 'version', 'title', 'skillIds', 'sourceUrl', 'scope', 'questions', 'createdBy', 'createdAt'])
+        && data.keys().hasOnly(['bankId', 'version', 'title', 'skillIds', 'sourceUrl', 'scope', 'questions', 'createdBy', 'createdAt'])
+        && knowledgeBankIdentity(data, bankKey)
+        && knowledgeNonblank(data.title, 160) && knowledgeSkillIds(data.skillIds)
+        && knowledgeNonblank(data.sourceUrl, 1000) && data.sourceUrl.matches('https://.*')
+        && knowledgeNonblank(data.scope, 1600) && knowledgeFourKeys(data.questions)
+        && knowledgeQuestion(data.questions.q1) && knowledgeQuestion(data.questions.q2)
+        && knowledgeQuestion(data.questions.q3) && knowledgeQuestion(data.questions.q4)
+        && data.createdBy == request.auth.uid
+        && data.createdAt is timestamp && data.createdAt == request.time;
+    }
+
+    function validKnowledgeGuide(bankKey) {
+      let data = request.resource.data;
+      let bank = getAfter(knowledgeBankPath(bankKey)).data;
+      return data.keys().hasAll(['bankId', 'version', 'questions', 'createdBy', 'createdAt'])
+        && data.keys().hasOnly(['bankId', 'version', 'questions', 'createdBy', 'createdAt'])
+        && knowledgeBankIdentity(data, bankKey)
+        && bank.bankId == data.bankId && bank.version == data.version
+        && knowledgeFourKeys(data.questions)
+        && knowledgeGuideQuestion(data.questions.q1) && knowledgeGuideQuestion(data.questions.q2)
+        && knowledgeGuideQuestion(data.questions.q3) && knowledgeGuideQuestion(data.questions.q4)
+        && data.createdBy == request.auth.uid
+        && data.createdAt is timestamp && data.createdAt == request.time;
+    }
+
+    function knowledgeCanReadOwner(ownerUid) {
+      let role = currentUser().role;
+      return knowledgeMember()
+        && (request.auth.uid == ownerUid || role == 'director'
+          || (role == 'mentor' && exists(userPath(ownerUid))
+            && get(userPath(ownerUid)).data.active == true
+            && get(userPath(ownerUid)).data.role == 'mentee'));
+    }
+
+    function knowledgeCanReviewOwner(ownerUid) {
+      let role = currentUser().role;
+      return knowledgeMember()
+        && (role == 'director'
+          || (role == 'mentor' && request.auth.uid != ownerUid
+            && exists(userPath(ownerUid))
+            && get(userPath(ownerUid)).data.active == true
+            && get(userPath(ownerUid)).data.role == 'mentee'));
+    }
+
+    function validKnowledgeAttempt(ownerUid) {
+      let data = request.resource.data;
+      let bank = get(knowledgeBankPath(data.bankKey)).data;
+      return data.keys().hasAll(['ownerId', 'ownerRole', 'bankKey', 'bankId', 'version', 'skillId', 'answers', 'createdAt'])
+        && data.keys().hasOnly(['ownerId', 'ownerRole', 'bankKey', 'bankId', 'version', 'skillId', 'answers', 'createdAt'])
+        && data.ownerId == ownerUid && data.ownerId == request.auth.uid
+        && data.ownerRole == currentUser().role
+        && knowledgeString(data.bankKey, 90) && knowledgeBankIdentity(data, data.bankKey)
+        && bank.bankId == data.bankId && bank.version == data.version
+        && exists(/databases/$(database)/documents/knowledgeGuides/$(data.bankKey))
+        && knowledgeNonblank(data.skillId, 100) && data.skillId in bank.skillIds
+        && knowledgeFourKeys(data.answers)
+        && knowledgeNonblank(data.answers.q1, 2000) && knowledgeNonblank(data.answers.q2, 2000)
+        && knowledgeNonblank(data.answers.q3, 2000) && knowledgeNonblank(data.answers.q4, 2000)
+        && data.createdAt is timestamp && data.createdAt == request.time;
+    }
+
+    function knowledgeVerdicts(value) {
+      return knowledgeFourKeys(value)
+        && value.q1 in ['correct', 'incorrect'] && value.q2 in ['correct', 'incorrect']
+        && value.q3 in ['correct', 'incorrect'] && value.q4 in ['correct', 'incorrect'];
+    }
+
+    function knowledgeTextMap(value, maximum) {
+      return knowledgeFourKeys(value)
+        && knowledgeString(value.q1, maximum) && knowledgeString(value.q2, maximum)
+        && knowledgeString(value.q3, maximum) && knowledgeString(value.q4, maximum);
+    }
+
+    function knowledgePracticeFeedback(verdict, feedback, task) {
+      // Types and maximum lengths have already been checked by knowledgeTextMap.
+      return verdict == 'correct'
+        || (feedback.matches('(?s).*\\S.*') && task.matches('(?s).*\\S.*'));
+    }
+
+    function validKnowledgeReview(ownerUid, attemptId) {
+      let data = request.resource.data;
+      let attempt = get(knowledgeAttemptPath(ownerUid, attemptId)).data;
+      return data.keys().hasAll(['reviewerId', 'reviewerName', 'verdicts', 'feedback', 'practiceTasks', 'summary', 'score', 'createdAt', 'status', 'reason'])
+        && data.keys().hasOnly(['reviewerId', 'reviewerName', 'verdicts', 'feedback', 'practiceTasks', 'summary', 'score', 'createdAt', 'status', 'reason'])
+        && data.reviewerId == request.auth.uid
+        && data.reviewerName == currentUser().displayName && knowledgeNonblank(data.reviewerName, 160)
+        && knowledgeVerdicts(data.verdicts)
+        && knowledgeTextMap(data.feedback, 1000) && knowledgeTextMap(data.practiceTasks, 1500)
+        && knowledgeString(data.summary, 1500) && knowledgeString(data.reason, 500)
+        && data.score is int && data.score >= 0 && data.score <= 4
+        && data.score == ((data.verdicts.q1 == 'correct' ? 1 : 0)
+          + (data.verdicts.q2 == 'correct' ? 1 : 0)
+          + (data.verdicts.q3 == 'correct' ? 1 : 0)
+          + (data.verdicts.q4 == 'correct' ? 1 : 0))
+        && data.status in ['graded', 'voided']
+        && (data.status == 'graded'
+          || (currentUser().role == 'director' && data.score == 0 && knowledgeNonblank(data.reason, 500)))
+        && (data.status == 'voided'
+          || (knowledgePracticeFeedback(data.verdicts.q1, data.feedback.q1, data.practiceTasks.q1)
+            && knowledgePracticeFeedback(data.verdicts.q2, data.feedback.q2, data.practiceTasks.q2)
+            && knowledgePracticeFeedback(data.verdicts.q3, data.feedback.q3, data.practiceTasks.q3)
+            && knowledgePracticeFeedback(data.verdicts.q4, data.feedback.q4, data.practiceTasks.q4)))
+        && exists(/databases/$(database)/documents/knowledgeGuides/$(attempt.bankKey))
+        && data.createdAt is timestamp && data.createdAt == request.time;
     }
 
     function validTimeEntry() {
@@ -610,6 +798,42 @@ service cloud.firestore {
       allow update: if false;
       allow delete: if isDirector()
         || (isMentor() && resource.data.mentorId == request.auth.uid);
+    }
+
+    match /knowledgeBanks/{bankKey} {
+      allow read: if knowledgeMember();
+      allow create: if knowledgeMember() && currentUser().role == 'director' && validKnowledgeBank(bankKey);
+      allow update, delete: if false;
+    }
+
+    match /knowledgeGuides/{bankKey} {
+      allow read: if knowledgeMember() && currentUser().role in ['mentor', 'director'];
+      allow create: if knowledgeMember() && currentUser().role == 'director' && validKnowledgeGuide(bankKey);
+      allow update, delete: if false;
+    }
+
+    match /knowledgeAttempts/{ownerUid}/submissions/{attemptId} {
+      allow read: if knowledgeCanReadOwner(ownerUid)
+        && (request.auth.uid == ownerUid || currentUser().role == 'director'
+          || resource.data.ownerRole == 'mentee');
+      allow create: if knowledgeMember() && request.auth.uid == ownerUid
+        && attemptId.matches('[A-Za-z0-9_-]{1,100}')
+        && validKnowledgeAttempt(ownerUid);
+      allow update, delete: if false;
+
+      match /reviews/{reviewId} {
+        allow read: if knowledgeCanReadOwner(ownerUid)
+          && exists(knowledgeAttemptPath(ownerUid, attemptId))
+          && (request.auth.uid == ownerUid || currentUser().role == 'director'
+            || get(knowledgeAttemptPath(ownerUid, attemptId)).data.ownerRole == 'mentee');
+        allow create: if knowledgeCanReviewOwner(ownerUid)
+          && reviewId.matches('[A-Za-z0-9_-]{1,100}')
+          && exists(knowledgeAttemptPath(ownerUid, attemptId))
+          && (currentUser().role == 'director'
+            || get(knowledgeAttemptPath(ownerUid, attemptId)).data.ownerRole == 'mentee')
+          && validKnowledgeReview(ownerUid, attemptId);
+        allow update, delete: if false;
+      }
     }
 
     match /availabilityPolls/{pollId} {

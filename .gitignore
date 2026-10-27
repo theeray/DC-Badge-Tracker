@@ -33,3 +33,8 @@ yarn-error.log*
 *.tsbuildinfo
 /outputs/
 /work/
+
+# Private grading keys must never be served or committed.
+/knowledge-private/
+*grading-guides*.json
+*answer-keys*.json

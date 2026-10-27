@@ -1,0 +1,142 @@
+[
+  {
+    "id": "kc-headshots",
+    "title": "Headshots",
+    "version": 1,
+    "skillIds": ["cc-headshots"],
+    "sourceUrl": "https://alphauniverse.com/stories/gear--settings-and-more-go-behind-the-scenes-of-a-pro-studio-portrait-shoot/",
+    "scope": "Studio portrait principles from the written Sony lesson. Its Alpha 1 body differs from DC's camera; the 24–105mm lens matches. This check does not cover DC-specific flash or trigger controls.",
+    "questions": [
+      { "id": "q1", "prompt": "Why is the 24–105mm zoom useful when a session needs full-body portraits and close headshots?", "topic": "Framing and lens choice" },
+      { "id": "q2", "prompt": "What is the main light's job in the demonstrated portrait setup, and what makes its light soft?", "topic": "Main light" },
+      { "id": "q3", "prompt": "A subject blends into the backdrop. What is the optional second light intended to change?", "topic": "Subject separation" },
+      { "id": "q4", "prompt": "Why should you not copy the tutorial's flash-power number unchanged into a different studio setup?", "topic": "Adapting exposure" }
+    ]
+  },
+  {
+    "id": "kc-lighting-studio",
+    "title": "Lighting Studio",
+    "version": 1,
+    "skillIds": ["cc-lighting"],
+    "sourceUrl": "https://www.iorad.com/player/2455074/Light-an-Object-and-or-Product-with-the-Lighting-Studio-Light-Box-",
+    "scope": "Authorized access, light-box preparation, product photography, and leaving the studio secure. A knowledge check is not permission to access equipment without approval.",
+    "questions": [
+      { "id": "q1", "prompt": "What must you arrange before entering the Lighting Studio for a product shoot?", "topic": "Access and booking" },
+      { "id": "q2", "prompt": "Describe how you prepare the light-box background and enclosure before photographing an object.", "topic": "Light-box preparation" },
+      { "id": "q3", "prompt": "How would you collect useful image options rather than relying on one photograph?", "topic": "Photographic coverage" },
+      { "id": "q4", "prompt": "List the cleanup and security checks you make before leaving the studio.", "topic": "Studio handoff" }
+    ]
+  },
+  {
+    "id": "kc-camera-autofocus",
+    "title": "Use the Digital Corps Camera",
+    "version": 1,
+    "skillIds": ["cc-camera"],
+    "sourceUrl": "https://support.d-imaging.sony.co.jp/support/ilc/autofocus/ilce7m4/en/03.php",
+    "scope": "Sony a7 IV still-photo human Face/Eye AF only—not full camera orientation or video setup.",
+    "questions": [
+      { "id": "q1", "prompt": "Which subject-detection settings prepare the a7 IV to prioritize a person's face or eyes for still photos?", "topic": "Face/Eye setup" },
+      { "id": "q2", "prompt": "Two people are in frame. How can the focus area help you select the intended person?", "topic": "Selecting a person" },
+      { "id": "q3", "prompt": "How do you activate focusing, and what does a green face or eye frame indicate?", "topic": "Confirming focus" },
+      { "id": "q4", "prompt": "How can you choose which eye the camera prioritizes?", "topic": "Eye selection" }
+    ]
+  },
+  {
+    "id": "kc-gimbal-connection",
+    "title": "Pair Camera to Gimbal",
+    "version": 1,
+    "skillIds": ["cc-gimbal-pair"],
+    "sourceUrl": "https://www.dji.com/support/product/rs-4",
+    "scope": "DJI RS 4 / RS 4 Pro model-specific camera connection. Confirm DC's actual gimbal model and camera compatibility before applying these steps. Not a balancing or operating authorization.",
+    "questions": [
+      { "id": "q1", "prompt": "What should you verify before applying this RS 4 / RS 4 Pro connection lesson to DC equipment?", "topic": "Model and compatibility" },
+      { "id": "q2", "prompt": "Describe how you start Bluetooth camera pairing from the RS 4 touchscreen.", "topic": "Bluetooth pairing" },
+      { "id": "q3", "prompt": "How does the touchscreen indicate successful Bluetooth camera pairing?", "topic": "Connection confirmation" },
+      { "id": "q4", "prompt": "With compatible camera control connected, what do a half-press, single press, and long press of the camera-control button do?", "topic": "Camera-control actions" }
+    ]
+  },
+  {
+    "id": "kc-improve-audio",
+    "title": "Improve Audio",
+    "version": 1,
+    "skillIds": ["cc-audio"],
+    "sourceUrl": "https://www.iorad.com/player/2365898/Improve-Audio-on-any-Video-with-Audacity-Plugin--Compress-Dynamics",
+    "scope": "The source's Audacity/FFmpeg workflow, isolated volume spikes, dynamics processing, listening checks, and audio export. Plugin availability may vary by workstation.",
+    "questions": [
+      { "id": "q1", "prompt": "Audacity cannot extract the audio when you import the source video. Which supporting component does the lesson have you check?", "topic": "Import support" },
+      { "id": "q2", "prompt": "One loud spike prevents the interview from being raised evenly. How does the lesson treat that spike first?", "topic": "Isolated peaks" },
+      { "id": "q3", "prompt": "What listening checks should accompany applying the dynamics compressor?", "topic": "Processing review" },
+      { "id": "q4", "prompt": "What do you export after processing, and how does it return to the video-editing workflow?", "topic": "Export and handoff" }
+    ]
+  },
+  {
+    "id": "kc-video-mockup",
+    "title": "Make a Video Mockup",
+    "version": 1,
+    "skillIds": ["cc-video-mockup"],
+    "sourceUrl": "https://www.iorad.com/player/2645750/Make-a-Video-Mockup",
+    "scope": "Choosing and customizing an approved After Effects template, checking the main composition, exporting, and collecting files. Excludes the source's incorrect suggestion to open Mac ._ metadata files.",
+    "questions": [
+      { "id": "q1", "prompt": "What should you review when selecting a video template before requesting access to its files?", "topic": "Template selection" },
+      { "id": "q2", "prompt": "How do the template's edit pre-compositions relate to the final main composition?", "topic": "Template structure" },
+      { "id": "q3", "prompt": "Describe the lesson's export route for producing an MP4 preview for approval.", "topic": "Video delivery" },
+      { "id": "q4", "prompt": "Why is the rendered MP4 not a complete editable handoff, and how do you collect the working project?", "topic": "Editable handoff" }
+    ]
+  },
+  {
+    "id": "kc-heat-press",
+    "title": "Heat Press a Shirt",
+    "version": 1,
+    "skillIds": ["cc-heat-press"],
+    "sourceUrl": "https://www.iorad.com/player/1937653/Heat-pressing-a-T-shirt--or-other-flat-substrate-",
+    "scope": "Source workflow for light/white flat substrates. Time, temperature, and pressure must match the actual product instructions and staff-approved setup. Passing is not authorization for unsupervised machine use.",
+    "questions": [
+      { "id": "q1", "prompt": "Where should the time, temperature, and pressure settings for your particular substrate come from?", "topic": "Material-specific settings" },
+      { "id": "q2", "prompt": "What preparation does the lesson describe for creases and moisture before placing the design?", "topic": "Substrate preparation" },
+      { "id": "q3", "prompt": "Before pressing, what orientation and placement checks should you make on the printed design?", "topic": "Transfer preparation" },
+      { "id": "q4", "prompt": "Why does the lesson place protective paper and a Teflon sheet above the design?", "topic": "Protective layers" }
+    ]
+  },
+  {
+    "id": "kc-embroidery",
+    "title": "Embroidery Machine Tutorial",
+    "version": 1,
+    "skillIds": ["cc-embroidery-machine"],
+    "sourceUrl": "https://www.iorad.com/player/2710821/Embroidery-Machine-Tutorial",
+    "scope": "Cap-frame setup checks, cap security, thread identification, design positioning, and safe shutdown from the supplied lesson. Require staff-supervised practical approval; this check does not authorize independent operation or bypass machine warnings.",
+    "questions": [
+      { "id": "q1", "prompt": "A cap ring's clip levers feel loose after fitting. What does this indicate, and should you start?", "topic": "Cap security" },
+      { "id": "q2", "prompt": "What bobbin and thread-color checks are needed before stitching the cap design?", "topic": "Thread preparation" },
+      { "id": "q3", "prompt": "What alignment and design-placement checks should a trained operator demonstrate before starting the cap project?", "topic": "Placement verification" },
+      { "id": "q4", "prompt": "According to the lesson, what machine state is required before unclipping and removing the finished cap?", "topic": "Safe removal" }
+    ]
+  },
+  {
+    "id": "kc-custom-qr",
+    "title": "Custom QR Codes",
+    "version": 1,
+    "skillIds": ["sm-qr"],
+    "sourceUrl": "https://www.iorad.com/player/1953084/Make-a-Custom-QR-Code",
+    "scope": "Vector QR artwork, the supplied Illustrator template, logo alignment, and saving the design. This checks the supplied editing workflow, not a guarantee that arbitrary QR decoration remains scannable.",
+    "questions": [
+      { "id": "q1", "prompt": "Which download format does the lesson choose from Linktree, and why is it useful for the design workflow?", "topic": "Vector source" },
+      { "id": "q2", "prompt": "Describe how you bring your QR artwork into the supplied Illustrator template.", "topic": "Template placement" },
+      { "id": "q3", "prompt": "How does the lesson use a key object when centering the logo within the outer frame?", "topic": "Logo alignment" },
+      { "id": "q4", "prompt": "What final file format does the lesson save for the designed QR artwork?", "topic": "Saving artwork" }
+    ]
+  },
+  {
+    "id": "kc-indesign-qr",
+    "title": "InDesign QR Code",
+    "version": 1,
+    "skillIds": ["sm-id-qr"],
+    "sourceUrl": "https://www.youtube.com/watch?v=jerBF6CKaY8",
+    "scope": "Generating, resizing, editing, and reusing QR artwork from the creator's written lesson description. The video transcript was not retrieved.",
+    "questions": [
+      { "id": "q1", "prompt": "Which InDesign command opens the QR generator, and what content type would you choose for a website?", "topic": "Generating a website code" },
+      { "id": "q2", "prompt": "The website address changes before publication. How can you edit the existing QR object in InDesign?", "topic": "Editing content" },
+      { "id": "q3", "prompt": "What kind of graphic does InDesign generate, and why is that helpful when resizing it?", "topic": "Scaling" },
+      { "id": "q4", "prompt": "How does the lesson reuse the generated QR artwork in another Adobe program?", "topic": "Cross-application reuse" }
+    ]
+  }
+]

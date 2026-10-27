@@ -2240,6 +2240,18 @@ input:focus-visible {
   text-decoration: underline;
 }
 
+button.knowledge-check-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  margin-top: 4px;
+  padding: 8px 0;
+  border: 0;
+  background: transparent;
+  font-size: 16px;
+  text-align: left;
+}
+
 .endorsement-stack {
   display: flex;
   min-width: 0;
