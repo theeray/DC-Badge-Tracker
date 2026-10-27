@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { allSkills, learningAreas, type Skill } from "./data";
+import { allSkills, getSkillResources, learningAreas, type Skill } from "./data";
 import {
   readableFirebaseError,
   removeSelfReportedSkill,
@@ -44,6 +44,7 @@ function skillAreaName(skill: Skill) {
 }
 
 function skillResourceLabel(skill: Skill) {
+  if (skill.resourceLabel) return `${skill.resourceLabel} ↗`;
   if (skill.internal) return "Open Teams resource ↗";
   if (skill.href) return "Open tutorial ↗";
   return "Open skill →";
@@ -486,11 +487,14 @@ export default function MemberDevelopment({
                   Assigned by {assignment.assignedByName}
                   {assignment.note ? ` · ${assignment.note}` : ""}
                 </p>
+                {skill.resourceNote ? <p className="skill-resource-context">{skill.resourceNote}</p> : null}
                 <footer>
-                  {skill.href ? (
-                    <a href={skill.href} target="_blank" rel="noreferrer">
-                      {skillResourceLabel(skill)}
-                    </a>
+                  {getSkillResources(skill).length ? (
+                    getSkillResources(skill).map((resource) => (
+                      <a key={resource.href} href={resource.href} target="_blank" rel="noreferrer">
+                        {resource.label} ↗
+                      </a>
+                    ))
                   ) : (
                     <button type="button" onClick={() => onOpenSkill(skill.area)}>
                       {skillResourceLabel(skill)}

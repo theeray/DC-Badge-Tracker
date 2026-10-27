@@ -1,15 +1,35 @@
 export type SkillStatus = "not-started" | "learning" | "ready" | "complete";
 
+export type SkillResourceLink = {
+  label: string;
+  href: string;
+};
+
 export type Skill = {
   id: string;
   title: string;
   group: string;
   area: string;
   href?: string;
+  resourceLabel?: string;
+  resourceNote?: string;
+  additionalResources?: SkillResourceLink[];
   internal?: boolean;
   searchTerms?: string[];
   tier?: "Silver" | "Gold";
 };
+
+export function getSkillResources(item: Skill): SkillResourceLink[] {
+  return [
+    ...(item.href
+      ? [{
+          href: item.href,
+          label: item.resourceLabel ?? (item.internal ? "Open Teams resource" : "Open tutorial"),
+        }]
+      : []),
+    ...(item.additionalResources ?? []),
+  ];
+}
 
 export type LearningArea = {
   id: string;
@@ -89,14 +109,30 @@ export const learningAreas: LearningArea[] = [
       skill(CONTENT, "Graphic Design", "cc-mistakes", "20 Common Mistakes Quiz", { href: "https://forms.cloud.microsoft/r/6LtVKuxu0n", tier: "Silver" }),
       skill(CONTENT, "Graphic Design", "cc-scan", "Scan Artwork", { href: "https://www.iorad.com/player/2546410/Scan-Artwork-in-TAD", tier: "Silver" }),
 
-      skill(CONTENT, "Photography", "cc-headshots", "Headshots", { href: "https://www.iorad.com/player/2455074/Light-an-Object-and-or-Product-with-the-Lighting-Studio-Light-Box-" }),
+      skill(CONTENT, "Photography", "cc-headshots", "Headshots", {
+        href: "https://alphauniverse.com/stories/gear--settings-and-more-go-behind-the-scenes-of-a-pro-studio-portrait-shoot/",
+        resourceLabel: "Portrait lighting & 24–105mm tutorial",
+        resourceNote: "Uses the Sony 24–105mm f/4 G lens on a different Sony body. For our a7 IV controls, also open Use the Digital Corps Camera. Confirm the studio light and trigger with a mentor before shooting.",
+        searchTerms: ["head shots", "portraits", "studio lighting", "Sony a7 IV", "24-105", "70-200"],
+      }),
       skill(CONTENT, "Photography", "cc-lighting", "Lighting Studio", { href: "https://www.iorad.com/player/2455074/Light-an-Object-and-or-Product-with-the-Lighting-Studio-Light-Box-" }),
-      skill(CONTENT, "Photography", "cc-camera", "Use the Digital Corps Camera", {}),
+      skill(CONTENT, "Photography", "cc-camera", "Use the Digital Corps Camera", {
+        href: "https://support.d-imaging.sony.co.jp/support/ilc/autofocus/ilce7m4/en/03.php",
+        resourceLabel: "Sony a7 IV: Face & Eye AF setup",
+        resourceNote: "Sony’s step-by-step guide for focusing on a person’s eyes with our a7 IV (ILCE-7M4). Use this alongside the Headshots lighting tutorial.",
+        searchTerms: ["headshots", "head shots", "portrait", "Sony a7 IV", "a7iv", "ILCE-7M4", "autofocus", "eye AF"],
+      }),
       skill(CONTENT, "Photography", "cc-lapel", "Wireless Lapel Microphone", { href: "https://www.iorad.com/player/2620488/Use-the-Wireless-Lapel-Mic-with-the-Digital-Corps-Camera" }),
       skill(CONTENT, "Photography", "cc-camera-overview", "Camera Interview Overview", { href: "https://www.iorad.com/player/2365987/Use-the-Digital-Corps-Camera-to-Conduct-an-Interview" }),
       skill(CONTENT, "Photography", "cc-gimbal", "Ronin Gimbal", {}),
       skill(CONTENT, "Photography", "cc-gimbal-balance", "Attach & Balance Camera", { href: "https://youtu.be/iPKBbyKkQFw?si=ftcYwypY6v8i2NiX" }),
-      skill(CONTENT, "Photography", "cc-gimbal-pair", "Pair Camera to Gimbal", { href: "https://youtu.be/wrmBX8E4Mv8?si=T9bYWq-SX-A0jjh5" }),
+      skill(CONTENT, "Photography", "cc-gimbal-pair", "Pair Camera to Gimbal", {
+        href: "https://cdn.djivideos.com/watch/559f8b1f-5845-4e3e-96bc-8a792a7c6e93",
+        resourceLabel: "DJI: How to Connect a Camera",
+        resourceNote: "Official RS 4 / RS 4 Pro connection video. Check the label on our gimbal and use DJI’s compatibility guide for its exact model and camera. Cable and Bluetooth support vary.",
+        additionalResources: [{ label: "Check gimbal & camera compatibility", href: "https://www.dji.com/support/compatibility" }],
+        searchTerms: ["DJI", "Ronin", "pairing", "Bluetooth", "camera control cable", "RS 4", "RS4"],
+      }),
       skill(CONTENT, "Photography", "cc-gimbal-overview", "Gimbal Overview", { href: "https://youtu.be/zcf3VokG7_Q?si=EhemzOMlNSM_ONJX" }),
       skill(CONTENT, "Photography", "cc-upscale", "Upscale Images (Super Resolution)", { href: "https://youtu.be/izJHaC6sKPY" }),
 
@@ -114,6 +150,11 @@ export const learningAreas: LearningArea[] = [
       skill(CONTENT, "Studio Production", "cc-studio-interview", "IM Studio: Conduct Interview", { internal: true }),
 
       skill(CONTENT, "Motion Graphics", "cc-logo-reveal", "Logo Reveal", { href: "/resources/onboarding/logo-reveal-tutorial.pdf" }),
+      skill(CONTENT, "Motion Graphics", "cc-ae-handwriting-matte", "After Effects: Handwriting Animation with Matte Masking", {
+        href: "https://www.youtube.com/watch?v=o0-nyp4Q3hw",
+        resourceNote: "Handwriting animation with a moving pen effect. Use matte masking to reveal the lettering as it is written.",
+        searchTerms: ["After Effects", "hand writing", "handwriting", "matte", "masking", "moving pen", "write on", "text animation"],
+      }),
       skill(CONTENT, "Motion Graphics", "cc-motion-package-pr", "Package Premiere Pro", {}),
       skill(CONTENT, "Motion Graphics", "cc-package-ae", "Package After Effects", { href: "https://youtu.be/bUoyPm3DWpM?si=EW6tssaL5-fooL88" }),
       skill(CONTENT, "Motion Graphics", "cc-text-reveal", "Text Reveal Effect", { href: "https://youtu.be/78uhkYo5UOE?si=irtMIjNFmvRAHAeu" }),

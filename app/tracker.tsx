@@ -23,6 +23,7 @@ import TimeTracker from "./time-tracker";
 const DCAvailability = lazy(() => import("./dc-availability"));
 import {
   allSkills,
+  getSkillResources,
   learningAreas,
   projectBriefs,
   statusLabels,
@@ -389,23 +390,21 @@ function AssetLibrary({ title, description, assets }: { title: string; descripti
 }
 
 function SkillResource({ item }: { item: Skill }) {
-  if (item.internal && item.href) {
-    return (
-      <a className="resource-link" href={item.href} target="_blank" rel="noreferrer">
-        Open Teams resource <ExternalArrow />
-      </a>
-    );
-  }
-
-  if (item.href) {
-    return (
-      <a className="resource-link" href={item.href} target="_blank" rel="noreferrer">
-        Open tutorial <ExternalArrow />
-      </a>
-    );
-  }
-
-  return <span className="resource-note">Practice activity</span>;
+  const resources = getSkillResources(item);
+  return (
+    <div className="skill-resources">
+      {resources.length ? (
+        <div className="skill-resource-links">
+          {resources.map((resource) => (
+            <a key={resource.href} className="resource-link" href={resource.href} target="_blank" rel="noreferrer">
+              {resource.label} <ExternalArrow />
+            </a>
+          ))}
+        </div>
+      ) : <span className="resource-note">Practice activity</span>}
+      {item.resourceNote ? <p className="skill-resource-context">{item.resourceNote}</p> : null}
+    </div>
+  );
 }
 
 function ProgressRing({
