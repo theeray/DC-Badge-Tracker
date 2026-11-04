@@ -1444,9 +1444,18 @@ function TrackerWorkspace({
               </section>
 
               <div className="track-toolbar">
-                <div className="group-tabs" role="tablist" aria-label="Skill groups">
-                  {activeGroups.map((group) => <button key={group} role="tab" aria-selected={selectedGroup === group} className={selectedGroup === group ? "active" : ""} onClick={() => setSelectedGroup(group)}>{group}</button>)}
-                </div>
+                <label className="tutorial-category-filter">
+                  <span>Skill category</span>
+                  <select
+                    value={selectedGroup}
+                    onChange={(event) => setSelectedGroup(event.target.value)}
+                    aria-label="Filter tutorials by skill category"
+                    disabled={Boolean(query.trim())}
+                    aria-describedby={query.trim() ? "tutorial-search-scope" : undefined}
+                  >
+                    {activeGroups.map((group) => <option key={group} value={group}>{group}</option>)}
+                  </select>
+                </label>
                 <label className="tutorial-status-filter">
                   <span>Status</span>
                   <select
@@ -1467,7 +1476,7 @@ function TrackerWorkspace({
               </div>
 
               {query.trim() ? (
-                <p className="global-search-note">Searching all four learning paths</p>
+                <p className="global-search-note" id="tutorial-search-scope">Searching all four learning paths. Clear the search to browse the selected skill category.</p>
               ) : null}
 
               <section className="skills-list">
@@ -1602,7 +1611,7 @@ function TrackerWorkspace({
                     </article>
                   );
                 })}
-                {!visibleSkills.length ? <div className="empty-state"><strong>No matching tutorials</strong><p>Try another search, group, or status filter.</p></div> : null}
+                {!visibleSkills.length ? <div className="empty-state"><strong>No matching tutorials</strong><p>Try another search, category, or status filter.</p></div> : null}
               </section>
             </>
           ) : null}

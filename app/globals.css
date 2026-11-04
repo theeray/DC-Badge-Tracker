@@ -1964,9 +1964,9 @@ input:focus-visible {
   position: sticky;
   top: 72px;
   z-index: 9;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(190px, 1fr);
+  align-items: end;
   gap: 16px;
   border-top: 1px solid var(--line);
   border-bottom: 1px solid var(--line);
@@ -2039,6 +2039,68 @@ input:focus-visible {
   font-size: 14px;
   font-weight: 700;
   white-space: nowrap;
+}
+
+.tutorial-category-filter,
+.track-toolbar .tutorial-status-filter {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+  color: var(--evergreen, #054f45);
+  font-size: 16px;
+  font-weight: 700;
+  white-space: normal;
+}
+
+.tutorial-category-filter select,
+.track-toolbar .tutorial-status-filter select {
+  width: 100%;
+  min-width: 0;
+  min-height: 48px;
+  border: 1px solid #cad7d4;
+  border-radius: 9px;
+  background: #fff;
+  color: #173b36;
+  padding: 10px 34px 10px 12px;
+  font: inherit;
+  text-overflow: ellipsis;
+}
+
+.tutorial-category-filter select:focus-visible,
+.track-toolbar .tutorial-status-filter select:focus-visible,
+.track-toolbar .search-field:focus-within {
+  outline: 3px solid var(--mint, #80a6a2);
+  outline-offset: 2px;
+}
+
+.tutorial-category-filter select:disabled {
+  background: #eaf0ed;
+  color: #526760;
+  cursor: not-allowed;
+}
+
+.track-toolbar .search-field {
+  width: 100%;
+  min-width: 0;
+  min-height: 48px;
+}
+
+.track-toolbar .search-field input {
+  min-width: 0;
+  min-height: 46px;
+  font-size: 16px;
+}
+
+@media (min-width: 761px) and (max-width: 1180px) {
+  .track-toolbar {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .track-toolbar .search-field {
+    grid-column: 1 / -1;
+  }
 }
 
 .tutorial-status-filter select {
@@ -3932,7 +3994,9 @@ button.knowledge-check-link {
   .track-toolbar {
     top: 64px;
     align-items: stretch;
-    flex-direction: column-reverse;
+    grid-template-columns: minmax(0, 1fr);
+    position: static;
+    gap: 16px;
   }
 
   .group-tabs {
@@ -6995,6 +7059,12 @@ select:focus-visible {
 }
 
 @media (max-width: 760px) {
+  .track-toolbar .tutorial-category-filter,
+  .track-toolbar .tutorial-status-filter,
+  .track-toolbar .search-field input {
+    font-size: 18px;
+  }
+
   .tutorial-status-filter {
     width: 100%;
     justify-content: space-between;
