@@ -4,12 +4,23 @@ The application uses Firebase Authentication, Cloud Firestore, and Firebase Host
 
 ## Account activation model
 
-1. A director creates an `approvedUsers/{email}` record with the person's name, approved email, role, and `active: true`. The app also supports a multiline roster paste for onboarding groups.
-2. The approved person creates their own password in the app.
-3. Firebase sends an email-verification link.
-4. After verification, the app creates `users/{uid}` from the approval record.
+1. A person creates their own password in the app. This is a separate DC Central password, not campus SSO.
+2. Firebase sends an email-verification link. After opening it, the person returns to **Sign in**.
+3. A verified address on exactly `live.bemidjistate.edu` or `go.minnstate.edu` can activate automatically as a **mentee**, without a manual approval record. Subdomains and lookalike domains do not qualify.
+4. Other addresses still need an active `approvedUsers/{email}` record created by a director. Existing manually approved external addresses remain supported. Active manual approvals supply their assigned role; only directors can assign mentor/director roles.
+5. An existing activated account keeps its role and records. Existing inactive profiles and paused approval records do not gain an automatic replacement account.
+
+Approving an email writes an access record only. It does **not** send an invitation, create a password, or send a verification message. Registration has no pending-approval or email-delivery log. If someone already created a password but did not receive verification, they should **Sign in** with that password to attempt a resend, not register a second time. A delivery failure is not proof of missing approval.
+
+The auth observer does not activate or sign out an unverified account while registration updates the name and sends verification. Registration signs that temporary session out in `finally`, including when an update/send fails. This avoids the previous observer/registration race and leaves the account available for sign-in/resend.
+
+The director roster includes activated profiles that have no manual approval record. Pausing or changing one of these accounts atomically updates the user profile and creates its manual override, so domain eligibility cannot silently undo the director's decision.
 
 The application never stores passwords. Firebase Authentication handles password hashing, reset links, and verification emails.
+
+## Deploying account-access changes
+
+From an authenticated Firebase CLI session, run `FIREBASE_HOSTING_UPLOAD_CONCURRENCY=1 npm run deploy:firebase:access`. This runs the application tests and build, publishes the Firestore rules, then publishes only the main `dc-central` Hosting site. It does not reset accounts or records, change billing, or replace the older sites' redirects. Review the rules and pilot the two allowed domains before a broader rollout.
 
 ## Collections
 
@@ -43,6 +54,7 @@ Roles are `mentee`, `mentor`, and `director`.
 - Student workers can create, edit, and remove only their own Silver and Gold self-reports. Directors may create private test claims; mentor and mentee accounts cannot read faculty test progress or claims. Self-reports remain visibly distinct from mentor endorsements and faculty verification.
 - Directors manage approvals, profiles, progress, endorsements, time entries, and skill credentials.
 - User roles cannot be self-promoted.
+- Domain-based activation requires a verified Firebase Auth email and creates only the caller's own mentee profile. The same domain/role restrictions are enforced in Firestore Security Rules, not only in the interface.
 - Active members can read shared DC Meet polls and save only their own named availability. Only the poll organizer can rename, close, reopen, or copy a poll; copied responses cannot be edited in place.
 
 ## Account continuity across hosting domains
@@ -66,5 +78,6 @@ Deploy `firestore.rules` and `firestore.indexes.json` before inviting pilot user
 11. Have one student save a member profile; confirm another student cannot read it while a mentor can filter it and export the matching CSV.
 12. Add faculty test progress and a faculty test badge; confirm neither record is readable from mentor or mentee accounts.
 13. Create a DC Meet poll, respond from a second member account, verify the ranked overlap, choose a time as the organizer, and confirm responses reopen only after the organizer reopens the poll.
+14. Test automatic activation with each of the two exact domains. Confirm unverified, lookalike-domain, and paused accounts cannot activate; confirm existing manual mentor/director roles remain unchanged.
 
 Account names and email addresses are live operational data and must not be committed to this public repository.

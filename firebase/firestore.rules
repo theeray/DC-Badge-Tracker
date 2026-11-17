@@ -1,5 +1,15 @@
 rules_version = '2';
 
+// Account bootstrap: users/{uid} contains displayName (nonblank <=160), email
+// (nonblank <=254), role (mentee|mentor|director), active (bool), createdAt and
+// updatedAt (timestamps). New accounts require all six fields. Verified exact
+// live.bemidjistate.edu/go.minnstate.edu emails without a manual approval may
+// create only their own active mentee profile. Any manual approval takes
+// precedence, including inactive approvals. approvedUsers stays director-only
+// for writes. Legacy activated profiles may lack createdAt; updates preserve
+// that original shape and cannot add/change/remove its creation timestamp.
+// Extra fields on legacy profiles are retained unchanged, never newly added.
+
 // Knowledge checks (all new records are immutable; corrections use a new version
 // or review revision, never overwrite a previous answer or grading decision):
 // knowledgeBanks/{bankId}_v{version}: bankId slug<=80, version int1..1000,
@@ -536,20 +546,76 @@ service cloud.firestore {
 
     function approvedForSelf() {
       return verifiedEmail()
-        && exists(approvalPath(request.auth.token.email))
-        && get(approvalPath(request.auth.token.email)).data.active == true;
+        && exists(approvalPath(request.auth.token.email.lower()))
+        && get(approvalPath(request.auth.token.email.lower())).data.active == true;
+    }
+
+    function automaticallyApprovedMenteeForSelf() {
+      return verifiedEmail()
+        && request.auth.token.email.size() <= 254
+        && request.auth.token.email.lower().matches(
+          '^[^@\\s]+@(live[.]bemidjistate[.]edu|go[.]minnstate[.]edu)$'
+        )
+        // Do not let a domain match bypass a director's pause or assigned role.
+        && !exists(approvalPath(request.auth.token.email.lower()));
+    }
+
+    function validUserCore() {
+      return request.resource.data.keys().hasAll([
+          'displayName', 'email', 'role', 'active'
+        ])
+        && nonblank(request.resource.data.displayName, 160)
+        && nonblank(request.resource.data.email, 254)
+        && request.resource.data.email.matches('^[^@\\s]+@[^@\\s]+$')
+        && request.resource.data.role in ['mentee', 'mentor', 'director']
+        && request.resource.data.active is bool
+        && (!request.resource.data.keys().hasAny(['createdAt'])
+          || request.resource.data.createdAt is timestamp)
+        && (!request.resource.data.keys().hasAny(['updatedAt'])
+          || request.resource.data.updatedAt is timestamp);
+    }
+
+    function validUserCreate() {
+      return validUserCore()
+        && request.resource.data.keys().hasOnly([
+          'displayName', 'email', 'role', 'active', 'createdAt', 'updatedAt'
+        ])
+        && request.resource.data.keys().hasAll(['createdAt', 'updatedAt'])
+        && request.resource.data.email == request.auth.token.email.lower()
+        && request.resource.data.active == true
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.updatedAt == request.time
+        && ((approvedForSelf()
+            && request.resource.data.role
+              == get(approvalPath(request.auth.token.email.lower())).data.role)
+          || (automaticallyApprovedMenteeForSelf()
+            && request.resource.data.role == 'mentee'));
+    }
+
+    function validUserUpdate() {
+      return validUserCore()
+        // Retain any legacy extra fields unchanged; do not allow new extras,
+        // arbitrary metadata changes, or removal through a replacement write.
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'displayName', 'email', 'role', 'active', 'updatedAt'
+        ])
+        && request.resource.data.updatedAt == request.time
+        && request.resource.data.keys().hasAny(['createdAt'])
+          == resource.data.keys().hasAny(['createdAt'])
+        && (!resource.data.keys().hasAny(['createdAt'])
+          || request.resource.data.createdAt == resource.data.createdAt);
     }
 
     match /approvedUsers/{email} {
       allow get: if verifiedEmail()
-        && (request.auth.token.email == email || isDirector());
+        && (request.auth.token.email.lower() == email || isDirector());
       allow list, create, update, delete: if isDirector();
     }
 
     match /users/{uid} {
       allow get: if (verifiedEmail()
           && request.auth.uid == uid
-          && approvedForSelf())
+          && (approvedForSelf() || automaticallyApprovedMenteeForSelf()))
         || (activeUser() && (isMentor() || isDirector()));
       allow list: if isMentor()
         || isDirector()
@@ -557,30 +623,16 @@ service cloud.firestore {
           && resource.data.role == 'mentor'
           && resource.data.active == true);
 
-      allow create: if signedIn()
+      allow create: if verifiedEmail()
         && request.auth.uid == uid
-        && approvedForSelf()
-        && request.resource.data.email == request.auth.token.email
-        && request.resource.data.displayName is string
-        && request.resource.data.role == get(approvalPath(request.auth.token.email)).data.role
-        && request.resource.data.active == true
-        && request.resource.data.createdAt == request.time
-        && request.resource.data.updatedAt == request.time
-        && request.resource.data.keys().hasOnly([
-          'displayName',
-          'email',
-          'role',
-          'active',
-          'createdAt',
-          'updatedAt'
-        ]);
+        && validUserCreate();
 
-      allow update: if isDirector()
+      allow update: if validUserUpdate() && (isDirector()
         || (activeUser()
           && request.auth.uid == uid
           && request.resource.data.diff(resource.data).affectedKeys()
             .hasOnly(['displayName', 'updatedAt'])
-          && request.resource.data.updatedAt == request.time);
+          && request.resource.data.updatedAt == request.time));
       allow delete: if isDirector();
     }
 

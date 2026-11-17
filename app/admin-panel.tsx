@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { buildAccessRoster, normalizeAccountEmail } from "./account-access";
 import {
   readableFirebaseError,
   resetMenteeProgress,
@@ -67,16 +68,23 @@ export default function AdminPanel({
   }, []);
 
   const profilesByEmail = useMemo(
-    () => new Map(profiles.map((profile) => [profile.email, profile])),
+    () => new Map(profiles.map((profile) => [normalizeAccountEmail(profile.email), profile])),
     [profiles],
   );
+  const accessRoster = useMemo(
+    () => buildAccessRoster(approvals, profiles),
+    [approvals, profiles],
+  );
+  const awaitingActivation = approvals.filter(
+    (approval) => approval.active && !profilesByEmail.has(normalizeAccountEmail(approval.email)),
+  ).length;
   const missingRequestedMentees = useMemo(
     () =>
       approvalsLoaded ? requestedMenteeApprovals.filter(
         (member) =>
-          !approvals.some((approval) => approval.email === member.email),
+          !accessRoster.some((approval) => normalizeAccountEmail(approval.email) === member.email),
       ) : [],
-    [approvals, approvalsLoaded],
+    [accessRoster, approvalsLoaded],
   );
 
   const approveRequestedMentees = async () => {
@@ -120,7 +128,7 @@ export default function AdminPanel({
     setMessage("");
     try {
       const next = { ...approval, ...updates };
-      const profile = profilesByEmail.get(approval.email);
+      const profile = profilesByEmail.get(normalizeAccountEmail(approval.email));
       if (profile) {
         await updateActivatedUser(profile, updates);
       } else {
@@ -209,6 +217,9 @@ export default function AdminPanel({
             Approve member emails, assign roles, pause access, and manage
             mentee records. Every active mentor and faculty director can review
             every active mentee. Members create and reset their own passwords.
+            Verified @live.bemidjistate.edu and @go.minnstate.edu addresses join
+            automatically as mentees. Other addresses and all mentor/director
+            roles still need your approval. Paused accounts stay paused.
           </p>
         </div>
         <div className="project-count">
@@ -271,25 +282,25 @@ export default function AdminPanel({
             </button>
           </form>
           <p>
-            Approval does not send a password. The member uses “Create
-            password,” verifies the approved email, and activates the
-            matching role automatically.
+            Approval does not send an invitation or password. New members use
+            “Create password,” verify their email, then sign in. If they already
+            created a password, they should sign in with it to resend verification.
           </p>
         </article>
 
         <article className="admin-summary-card">
           <span className="eyebrow">Roster status</span>
           <div>
-            <strong>{approvals.length}</strong>
-            <span>approved emails</span>
+            <strong>{accessRoster.length}</strong>
+            <span>members and approvals</span>
           </div>
           <div>
-            <strong>{approvals.length - profiles.length}</strong>
+            <strong>{awaitingActivation}</strong>
             <span>awaiting activation</span>
           </div>
           <div>
-            <strong>{approvals.filter((item) => item.active).length}</strong>
-            <span>active approvals</span>
+            <strong>{accessRoster.filter((item) => item.active).length}</strong>
+            <span>active access entries</span>
           </div>
         </article>
       </section>
@@ -363,8 +374,8 @@ export default function AdminPanel({
               </tr>
             </thead>
             <tbody>
-              {approvals.map((approval) => {
-                const profile = profilesByEmail.get(approval.email);
+              {accessRoster.map((approval) => {
+                const profile = profilesByEmail.get(normalizeAccountEmail(approval.email));
                 const busy = busyEmail === approval.email;
                 const isCurrentDirector = profile?.uid === currentDirector.uid;
                 return (

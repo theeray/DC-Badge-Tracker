@@ -3,7 +3,7 @@ import {
   browserLocalPersistence,
   createUserWithEmailAndPassword,
   getAuth,
-  onAuthStateChanged,
+  onIdTokenChanged,
   reload,
   sendEmailVerification,
   sendPasswordResetEmail,
@@ -31,6 +31,12 @@ import {
   type Unsubscribe,
 } from "firebase/firestore";
 import type { SkillStatus } from "./data";
+import {
+  completeEmailRegistration,
+  createAuthOperationBarrier,
+  normalizeAccountEmail,
+  resolveNewAccountRole,
+} from "./account-access";
 
 const firebaseConfig = {
   apiKey: "AIzaSyA-vv7a-1baW1kyGyMZPl_DT2j9HV1ycoU",
@@ -45,6 +51,7 @@ const firebaseConfig = {
 const firebaseApp = getApps().length ? getApp() : initializeApp(firebaseConfig);
 export const auth = getAuth(firebaseApp);
 export const db = getFirestore(firebaseApp);
+const authOperations = createAuthOperationBarrier();
 
 if (typeof window !== "undefined") {
   void setPersistence(auth, browserLocalPersistence);
@@ -172,7 +179,7 @@ export type AuthSession = {
 };
 
 function normalizeEmail(email: string) {
-  return email.trim().toLowerCase();
+  return normalizeAccountEmail(email);
 }
 
 function profileFromDocument(uid: string, data: DocumentData): UserProfile {
@@ -230,50 +237,72 @@ export async function registerWithInstitutionalEmail(
   password: string,
   displayName: string,
 ) {
-  const credential = await createUserWithEmailAndPassword(
-    auth,
-    normalizeEmail(email),
-    password,
-  );
-  await updateProfile(credential.user, { displayName: displayName.trim() });
-  await sendEmailVerification(credential.user);
-  await signOut(auth);
+  const name = displayName.trim();
+  if (!name || name.length > 160) {
+    throw new Error("Enter your name using 1–160 characters.");
+  }
+  await authOperations.run(() => completeEmailRegistration<User>({
+    createUser: async () => (await createUserWithEmailAndPassword(
+      auth,
+      normalizeEmail(email),
+      password,
+    )).user,
+    updateName: (user) => updateProfile(user, { displayName: name }),
+    sendVerification: (user) => sendEmailVerification(user),
+    signOut: async (user) => {
+      if (auth.currentUser?.uid === user.uid) await signOut(auth);
+    },
+  }));
 }
 
 export async function signInWithInstitutionalEmail(
   email: string,
   password: string,
 ) {
-  const credential = await signInWithEmailAndPassword(
-    auth,
-    normalizeEmail(email),
-    password,
-  );
-  await reload(credential.user);
-  if (!credential.user.emailVerified) {
-    let message =
-      "Verification email sent. Open it in your institutional inbox, verify the address, then sign in again.";
+  return authOperations.run(async () => {
+    const credential = await signInWithEmailAndPassword(
+      auth,
+      normalizeEmail(email),
+      password,
+    );
     try {
-      await sendEmailVerification(credential.user);
-    } catch {
-      message =
-        "Please verify your approved email before signing in. If the verification message is not in your inbox, wait a moment and try signing in again to resend it.";
-    } finally {
-      await signOut(auth);
+      const wasVerified = credential.user.emailVerified;
+      await reload(credential.user);
+      if (!credential.user.emailVerified) {
+        let message =
+          "Verification email sent. Open it in your institutional inbox, verify the address, then sign in again.";
+        try {
+          await sendEmailVerification(credential.user);
+        } catch {
+          message =
+            "Please verify your approved email before signing in. If the verification message is not in your inbox, wait a moment and try signing in again to resend it.";
+        }
+        throw new Error(message);
+      }
+      // A cached unverified user may become verified during reload. Refresh
+      // the token before observers/Firestore use its email_verified claim.
+      if (!wasVerified) await credential.user.getIdToken(true);
+      return credential.user;
+    } catch (error) {
+      if (auth.currentUser?.uid === credential.user.uid) await signOut(auth);
+      throw error;
     }
-    throw new Error(message);
-  }
-  return credential.user;
+  });
 }
 
 export async function resendVerification(email: string, password: string) {
-  const credential = await signInWithEmailAndPassword(
-    auth,
-    normalizeEmail(email),
-    password,
-  );
-  await sendEmailVerification(credential.user);
-  await signOut(auth);
+  await authOperations.run(async () => {
+    const credential = await signInWithEmailAndPassword(
+      auth,
+      normalizeEmail(email),
+      password,
+    );
+    try {
+      await sendEmailVerification(credential.user);
+    } finally {
+      if (auth.currentUser?.uid === credential.user.uid) await signOut(auth);
+    }
+  });
 }
 
 export async function requestPasswordReset(email: string) {
@@ -281,13 +310,13 @@ export async function requestPasswordReset(email: string) {
 }
 
 export async function signOutCurrentUser() {
-  await signOut(auth);
+  await authOperations.run(() => signOut(auth));
 }
 
 export async function ensureProfile(user: User): Promise<UserProfile> {
   const email = normalizeEmail(user.email ?? "");
   if (!email || !user.emailVerified) {
-    throw new Error("A verified approved email is required.");
+    throw new Error("Verify your email address before entering DC Central.");
   }
 
   const profileReference = doc(db, "users", user.uid);
@@ -302,19 +331,20 @@ export async function ensureProfile(user: User): Promise<UserProfile> {
 
   const approvalReference = doc(db, "approvedUsers", email);
   const approval = await getDoc(approvalReference);
-  if (!approval.exists() || approval.data().active !== true) {
-    throw new Error(
-      "This email is not on the approved Digital Corps roster. Contact a faculty director.",
-    );
-  }
-
-  const approvalData = approval.data();
-  const profile = {
-    displayName:
-      user.displayName?.trim() ||
-      String(approvalData.displayName ?? email.split("@")[0]),
-    email,
+  const approvalData = approval.exists() ? approval.data() : null;
+  const role = resolveNewAccountRole(email, user.emailVerified, approvalData ? {
+    active: approvalData.active === true,
     role: approvalData.role as AppRole,
+  } : null);
+  const displayName = user.displayName?.trim()
+    || String(approvalData?.displayName ?? email.split("@")[0]).trim();
+  if (!displayName || displayName.length > 160) {
+    throw new Error("Your account name must use 1–160 characters. Contact a faculty director for help.");
+  }
+  const profile = {
+    displayName,
+    email,
+    role,
     active: true,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
@@ -327,22 +357,44 @@ export function watchAuthSession(
   onSession: (session: AuthSession | null) => void,
   onError: (message: string) => void,
 ): Unsubscribe {
-  return onAuthStateChanged(auth, async (user) => {
+  let observation = 0;
+  let stopped = false;
+  const unsubscribe = onIdTokenChanged(auth, async (user) => {
+    const currentObservation = ++observation;
+    let operationVersion: number;
+    const isCurrent = () => !stopped
+      && currentObservation === observation
+      && auth.currentUser?.uid === user?.uid
+      && authOperations.isCurrent(operationVersion);
+    // Creating an account signs it in before updateProfile/verification finish.
+    // Do not run ensureProfile or sign it out while that sequence is in flight.
     if (!user) {
       onSession(null);
       return;
     }
 
     try {
-      await reload(user);
+      operationVersion = await authOperations.wait();
+      if (!isCurrent()) return;
+      if (!user.emailVerified) {
+        onSession(null);
+        return;
+      }
       const profile = await ensureProfile(user);
+      if (!isCurrent()) return;
       onSession({ user, profile });
     } catch (error) {
+      if (!isCurrent()) return;
       onError(readableFirebaseError(error));
       await signOut(auth);
       onSession(null);
     }
   });
+  return () => {
+    stopped = true;
+    observation += 1;
+    unsubscribe();
+  };
 }
 
 export function watchProgress(
@@ -624,20 +676,22 @@ export async function updateActivatedUser(
   profile: UserProfile,
   updates: Pick<UserProfile, "role" | "active">,
 ) {
-  await updateDoc(doc(db, "users", profile.uid), {
+  const batch = writeBatch(db);
+  batch.update(doc(db, "users", profile.uid), {
     ...updates,
     updatedAt: serverTimestamp(),
   });
-  await setDoc(
-    doc(db, "approvedUsers", profile.email),
+  batch.set(
+    doc(db, "approvedUsers", normalizeEmail(profile.email)),
     {
-      email: profile.email,
+      email: normalizeEmail(profile.email),
       displayName: profile.displayName,
       ...updates,
       updatedAt: serverTimestamp(),
     },
     { merge: true },
   );
+  await batch.commit();
 }
 
 export function watchProgressBackups(
@@ -1156,9 +1210,9 @@ export function readableFirebaseError(error: unknown) {
       : "";
   const messages: Record<string, string> = {
     "auth/email-already-in-use":
-      "An account already exists for that email. Use Sign in or Reset password.",
+      "An account already exists for that email. Use Sign in with your existing password to resend verification, or choose Reset password.",
     "auth/invalid-credential": "The email or password is incorrect.",
-    "auth/invalid-email": "Enter a valid approved email address.",
+    "auth/invalid-email": "Enter a valid email address.",
     "auth/too-many-requests":
       "Firebase temporarily paused sign-in attempts. Please wait a few minutes.",
     "auth/weak-password": "Use a password with at least six characters.",

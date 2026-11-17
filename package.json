@@ -11,13 +11,15 @@
     "build:firebase": "vite build --config firebase.vite.config.ts",
     "deploy:firebase": "npm run test && npx --yes firebase-tools@15.28.2 deploy --only firestore,hosting",
     "deploy:firebase:central": "npm run test && npx --yes firebase-tools@15.28.2 deploy --only hosting:central --config firebase.central-hosting.json --project digital-corps-badge-tracker",
+    "deploy:firebase:access": "npm run test && npx --yes firebase-tools@15.28.2 deploy --only firestore:rules --project digital-corps-badge-tracker && npx --yes firebase-tools@15.28.2 deploy --only hosting:central --config firebase.central-hosting.json --project digital-corps-badge-tracker",
     "deploy:firebase:short": "npm run test && npx --yes firebase-tools@15.28.2 deploy --only hosting:short --config firebase.short-hosting.json --project digital-corps-badge-tracker",
     "preview": "vite preview --config firebase.vite.config.ts",
-    "test": "npm run test:catalog && npm run test:knowledge && npm run test:availability && npm run build",
+    "test": "npm run test:auth && npm run test:catalog && npm run test:knowledge && npm run test:availability && npm run build",
+    "test:auth": "node --experimental-strip-types --test tests/auth-onboarding.test.mjs",
     "test:catalog": "node --experimental-strip-types --test tests/tutorial-catalog.test.mjs tests/tutorial-navigation.test.mjs",
     "test:knowledge": "node --experimental-strip-types --test tests/knowledge-catalog.test.mjs",
     "test:availability": "node --test tests/availability-scheduling.test.mjs",
-    "test:rules": "npx --yes firebase-tools@15.28.2 emulators:exec --project digital-corps-badge-tracker-rules-test --only firestore \"node --test tests/firestore.rules.test.mjs tests/knowledge-rules.test.mjs\"",
+    "test:rules": "npx --yes firebase-tools@15.28.2 emulators:exec --project digital-corps-badge-tracker-rules-test --only firestore \"node --test tests/firestore.rules.test.mjs tests/knowledge-rules.test.mjs tests/auto-approval.rules.test.mjs\"",
     "typecheck:firebase": "tsc --project tsconfig.firebase.json"
   },
   "dependencies": {

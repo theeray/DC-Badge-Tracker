@@ -48,7 +48,7 @@ export default function AuthPanel({
 
   const resetPassword = async () => {
     if (!email.trim()) {
-      setMessage("Enter your approved email first, then choose Reset password.");
+      setMessage("Enter your account email first, then choose Reset password.");
       return;
     }
     setBusy(true);
@@ -110,7 +110,7 @@ export default function AuthPanel({
 
         <div className="auth-card-heading">
           <span className="eyebrow">
-            {mode === "sign-in" ? "Welcome back" : "Approved members"}
+            {mode === "sign-in" ? "Welcome back" : "Join Digital Corps"}
           </span>
           <h2 id="auth-heading">
             {mode === "sign-in"
@@ -119,8 +119,8 @@ export default function AuthPanel({
           </h2>
           <p>
             {mode === "sign-in"
-              ? "Use the approved email and password you created for this app."
-              : "Use the email approved by a faculty director and choose your own password. This does not use MinnState or Outlook sign-in."}
+              ? "Use the email and password you created for this app. If your email is unverified, signing in attempts to resend verification."
+              : "Verified @live.bemidjistate.edu and @go.minnstate.edu addresses join automatically as mentees. Other addresses need faculty-director approval. Choose your own password; this does not use MinnState or Outlook sign-in."}
           </p>
         </div>
 
@@ -131,6 +131,7 @@ export default function AuthPanel({
               <input
                 type="text"
                 autoComplete="name"
+                maxLength={160}
                 value={displayName}
                 onChange={(event) => setDisplayName(event.target.value)}
                 required
@@ -138,9 +139,10 @@ export default function AuthPanel({
             </label>
           ) : null}
           <label>
-            <span>Approved email</span>
+            <span>Email address</span>
             <input
               type="email"
+              maxLength={254}
               autoComplete="username"
               value={email}
               onChange={(event) => setEmail(event.target.value)}
@@ -174,7 +176,7 @@ export default function AuthPanel({
               Reset password
             </button>
           ) : (
-            <span>Only addresses approved by a faculty director can enter the tracker.</span>
+            <span>Verify your email, then return to Sign in. Already created a password? Use Sign in instead of registering again. Mentor and director roles are assigned only by faculty directors.</span>
           )}
           <button type="button" onClick={onBrowse}>Browse public resources</button>
         </div>
