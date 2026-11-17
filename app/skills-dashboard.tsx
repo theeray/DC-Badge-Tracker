@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { allSkills, learningAreas, type Skill } from "./data";
+import { type Skill } from "./data";
+import { useContentCatalog } from "./content-context";
 import MemberDirectory from "./member-directory";
 import {
   addEndorsement,
@@ -57,10 +58,6 @@ const verifiedLevelLabels: Record<VerifiedLevel, string> = {
   Endorsed: "Demonstrated skill",
 };
 
-function areaName(skill: Skill) {
-  return learningAreas.find((area) => area.id === skill.area)?.name ?? skill.area;
-}
-
 function rowRank(row: CredentialRow) {
   if (row.verifiedLevel === "Gold" || row.reported?.level === "Gold") return 0;
   if (row.verifiedLevel === "Silver" || row.reported?.level === "Silver") return 1;
@@ -68,6 +65,8 @@ function rowRank(row: CredentialRow) {
 }
 
 export default function SkillsDashboard({ session }: { session: AuthSession }) {
+  const { allSkills, allSkillsIncludingArchived, learningAreas, allAreasIncludingArchived } = useContentCatalog();
+  const areaName = (skill: Skill) => allAreasIncludingArchived.find((area) => area.id === skill.area)?.name ?? skill.area;
   const isDirector = session.profile.role === "director";
   const isMentor = session.profile.role === "mentor";
   const isMentee = session.profile.role === "mentee";
@@ -217,7 +216,7 @@ export default function SkillsDashboard({ session }: { session: AuthSession }) {
 
     const nextRows: CredentialRow[] = [];
     for (const worker of workers) {
-      for (const skill of allSkills) {
+      for (const skill of allSkillsIncludingArchived) {
         const key = `${worker.uid}_${skill.id}`;
         const manual = manualByKey.get(key) ?? null;
         const reported = reportsByKey.get(key) ?? null;
@@ -249,7 +248,7 @@ export default function SkillsDashboard({ session }: { session: AuthSession }) {
         a.worker.displayName.localeCompare(b.worker.displayName) ||
         a.skill.title.localeCompare(b.skill.title),
     );
-  }, [endorsements, manualCredentials, progress, selfReports, workers]);
+  }, [allSkillsIncludingArchived, endorsements, manualCredentials, progress, selfReports, workers]);
 
   const visibleRows = useMemo(() => {
     const normalized = query.trim().toLowerCase();

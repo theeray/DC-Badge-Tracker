@@ -188,6 +188,176 @@ service cloud.firestore {
       return /databases/$(database)/documents/knowledgeBanks/$(bankKey);
     }
 
+    function knowledgeCatalogPath(bankId) {
+      return /databases/$(database)/documents/knowledgeCatalog/$(bankId);
+    }
+
+    function contentSlug(value) {
+      return value is string && value.size() <= 80
+        && value.matches('[a-z0-9]+(-[a-z0-9]+)*');
+    }
+
+    function contentText(value, maximum) {
+      return value is string && value.size() <= maximum
+        && value.matches('(?s).*\\S.*');
+    }
+
+    function contentFields(value, fields) {
+      let keys = value.keys();
+      // Equal cardinality plus hasOnly enforces both required and allowed keys,
+      // without evaluating the same long field-list literal twice.
+      return keys.size() == fields.size() && keys.hasOnly(fields);
+    }
+
+    function validKnowledgeCatalog(bankId) {
+      let data = request.resource.data;
+      return contentFields(data, ['bankId', 'archived', 'revision', 'updatedBy', 'updatedAt'])
+        && contentSlug(data.bankId) && data.bankId == bankId
+        && data.archived is bool
+        && data.revision is int && data.revision >= 1 && data.revision <= 100000
+        && knowledgeNonblank(data.updatedBy, 128) && data.updatedBy == request.auth.uid
+        && data.updatedAt is timestamp && data.updatedAt == request.time;
+    }
+
+    // Content authoring is additive. Only directors may publish; active verified
+    // members may read current records. Never put member records or answer keys
+    // here. Each write is paired atomically with an immutable, director-only
+    // revision containing exactly the same payload, so archive/restore is audited.
+    function managedContentPath(entryId) {
+      return /databases/$(database)/documents/managedContent/$(entryId);
+    }
+
+    function managedRevisionPath(entryId, revision) {
+      return /databases/$(database)/documents/managedContent/$(entryId)/revisions/$(string(revision));
+    }
+
+    function contentUrl(value, allowBlank) {
+      return value is string && value.size() <= 1000
+        && ((allowBlank && value == '')
+          // The entire URL is matched. Both alternatives exclude raw controls,
+          // spaces, backslashes; HTTPS authority also excludes credentials.
+          || value.matches('(?i)(https://[^/?#@\\x00-\\x20\\x7f\\\\]+([/?#][^\\x00-\\x20\\x7f\\\\]*)?|/([^/\\x00-\\x20\\x7f\\\\][^\\x00-\\x20\\x7f\\\\]*)?)'));
+    }
+
+    function contentResourceLink(value) {
+      // Required label/href accesses below fail closed if either is absent.
+      return value is map
+        && value.keys().hasOnly(['label', 'href'])
+        && value.label is string && value.label.size() <= 160
+        && value.label.matches('(?s).*\\S.*')
+        && value.href is string && value.href.size() <= 1000
+        && value.href.matches('(?i)(https://[^/?#@\\x00-\\x20\\x7f\\\\]+([/?#][^\\x00-\\x20\\x7f\\\\]*)?|/([^/\\x00-\\x20\\x7f\\\\][^\\x00-\\x20\\x7f\\\\]*)?)');
+    }
+
+    function contentResourceLinks(value) {
+      let count = value.size();
+      return value is list && count <= 6
+        && (count == 0 || (contentResourceLink(value[0])
+          && (count == 1 || (contentResourceLink(value[1])
+            && (count == 2 || (contentResourceLink(value[2])
+              && (count == 3 || (contentResourceLink(value[3])
+                && (count == 4 || (contentResourceLink(value[4])
+                  && (count == 5 || contentResourceLink(value[5]))))))))))));
+    }
+
+    function contentStrings(value, maximum) {
+      let joined = value.join('\u0000');
+      // The lossless split round-trip rejects non-string items and embedded NUL.
+      // Delimiter-bounded regexes validate every item, without spending hundreds
+      // of Rules expressions on four separate twelve-item project text lists.
+      return value is list && value.size() <= 12
+        && (value.size() == 0 || (joined.split('\u0000') == value
+          && joined.matches('(?s)[^\\x00]{1,' + string(maximum) + '}(\\x00[^\\x00]{1,' + string(maximum) + '}){0,11}')
+          && !joined.matches('(?s)(.*\\x00)?\\s*(\\x00.*)?')));
+    }
+
+    function contentAssets(value) {
+      let joined = value.join('\u0000');
+      // A filename begins with an ASCII letter/digit/underscore. A dot must be
+      // followed by a non-dot (or be its final character), so '..' never passes.
+      let filename = '[A-Za-z0-9_]([A-Za-z0-9_ -]|[.][A-Za-z0-9_ -])*[.]?';
+      let url = '(?i:https://[^/?#@\\x00-\\x20\\x7f\\\\]+([/?#][^\\x00-\\x20\\x7f\\\\]*)?)|/([^/\\x00-\\x20\\x7f\\\\][^\\x00-\\x20\\x7f\\\\]*)?';
+      let asset = '(' + filename + '|' + url + ')';
+      return value is list && value.size() <= 12
+        && (value.size() == 0 || (joined.split('\u0000') == value
+          && joined.matches('(?s)[^\\x00]{1,1000}(\\x00[^\\x00]{1,1000}){0,11}')
+          && joined.matches(asset + '(\\x00' + asset + '){0,11}')));
+    }
+
+    function validContentTutorial(data) {
+      return contentFields(data, ['id', 'title', 'group', 'area', 'href', 'resourceLabel', 'resourceNote', 'additionalResources', 'internal', 'searchTerms', 'tier'])
+        && contentText(data.title, 160) && contentText(data.group, 160)
+        && contentSlug(data.area) && contentUrl(data.href, true)
+        && knowledgeString(data.resourceLabel, 160) && knowledgeString(data.resourceNote, 1600)
+        && contentResourceLinks(data.additionalResources) && data.internal is bool
+        && contentStrings(data.searchTerms, 160) && data.tier in ['', 'Silver', 'Gold'];
+    }
+
+    function validContentArea(data) {
+      return contentFields(data, ['id', 'name', 'shortName', 'eyebrow', 'description'])
+        && !(data.id in ['admin', 'brand-guides', 'content-editor', 'dc-meet', 'knowledge-checks', 'member-development', 'new-hire-onboarding', 'overview', 'projects', 'skills-dashboard', 'time-clock'])
+        && contentText(data.name, 160) && contentText(data.shortName, 80)
+        && knowledgeString(data.eyebrow, 160) && knowledgeString(data.description, 1600);
+    }
+
+    function validContentProject(data) {
+      return contentFields(data, ['id', 'title', 'discipline', 'kicker', 'timeline', 'format', 'summary', 'briefHref', 'assetHref', 'accent', 'deliverables', 'workflow', 'constraints', 'evaluation', 'assets'])
+        && contentText(data.title, 160)
+        && knowledgeString(data.discipline, 160) && knowledgeString(data.kicker, 160)
+        && knowledgeString(data.timeline, 160) && knowledgeString(data.format, 160)
+        && knowledgeString(data.summary, 1600)
+        && contentUrl(data.briefHref, false) && contentUrl(data.assetHref, true)
+        && data.accent in ['green', 'mint', 'orange', 'silver']
+        && contentStrings(data.deliverables, 1000) && contentStrings(data.workflow, 1000)
+        && contentStrings(data.constraints, 1000) && contentStrings(data.evaluation, 1000)
+        && contentAssets(data.assets);
+    }
+
+    function validContentResource(data) {
+      return contentFields(data, ['id', 'section', 'title', 'description', 'href', 'format', 'kind'])
+        && data.section in ['onboarding', 'digital-corps', 'bsu-academics', 'bsu-athletics', 'tad']
+        && contentText(data.title, 160) && knowledgeString(data.description, 1600)
+        && contentUrl(data.href, false)
+        && knowledgeString(data.format, 160) && knowledgeString(data.kind, 160);
+    }
+
+    function validManagedContent(entryId) {
+      let data = request.resource.data;
+      return contentFields(data, ['kind', 'key', 'data', 'archived', 'revision', 'createdBy', 'createdAt', 'updatedBy', 'updatedAt'])
+        && data.kind in ['tutorial', 'area', 'project', 'resource']
+        && contentSlug(data.key) && entryId == data.kind + '--' + data.key
+        && data.data is map && data.data.id == data.key
+        && data.archived is bool
+        && data.revision is int && data.revision >= 1 && data.revision <= 100000
+        && contentText(data.createdBy, 128) && data.createdAt is timestamp
+        && contentText(data.updatedBy, 128) && data.updatedBy == request.auth.uid
+        && data.updatedAt is timestamp && data.updatedAt == request.time
+        && ((data.kind == 'tutorial' && validContentTutorial(data.data))
+          || (data.kind == 'area' && validContentArea(data.data))
+          || (data.kind == 'project' && validContentProject(data.data))
+          || (data.kind == 'resource' && validContentResource(data.data)));
+    }
+
+    function managedContentHasNewRevision(entryId) {
+      let history = managedRevisionPath(entryId, request.resource.data.revision);
+      return !exists(history) && getAfter(history).data == request.resource.data;
+    }
+
+    function validManagedRevision(entryId, revisionId) {
+      let data = request.resource.data;
+      let current = managedContentPath(entryId);
+      // Validating the parent write enforces the entire content schema. A parent
+      // revision must advance in this same request: an old current record cannot
+      // be used to append unpaired history, even if its payload is copied exactly.
+      // The parent's mandatory getAfter(history) equality already checks the
+      // entire snapshot once; checking it twice would waste the expression budget.
+      return revisionId == string(data.revision)
+        && getAfter(current).data.revision == data.revision
+        && data.updatedBy == request.auth.uid && data.updatedAt == request.time
+        && ((!exists(current) && data.revision == 1)
+          || (exists(current) && get(current).data.revision + 1 == data.revision));
+    }
+
     function knowledgeAttemptPath(ownerUid, attemptId) {
       return /databases/$(database)/documents/knowledgeAttempts/$(ownerUid)/submissions/$(attemptId);
     }
@@ -300,6 +470,8 @@ service cloud.firestore {
         && data.ownerRole == currentUser().role
         && knowledgeString(data.bankKey, 90) && knowledgeBankIdentity(data, data.bankKey)
         && bank.bankId == data.bankId && bank.version == data.version
+        && (!exists(knowledgeCatalogPath(data.bankId))
+          || get(knowledgeCatalogPath(data.bankId)).data.archived == false)
         && exists(/databases/$(database)/documents/knowledgeGuides/$(data.bankKey))
         && knowledgeNonblank(data.skillId, 100) && data.skillId in bank.skillIds
         && knowledgeFourKeys(data.answers)
@@ -850,6 +1022,42 @@ service cloud.firestore {
       allow update: if false;
       allow delete: if isDirector()
         || (isMentor() && resource.data.mentorId == request.auth.uid);
+    }
+
+    match /managedContent/{entryId} {
+      allow read: if knowledgeMember();
+      allow create: if verifiedEmail() && isDirector()
+        && validManagedContent(entryId)
+        && request.resource.data.revision == 1
+        && request.resource.data.createdBy == request.auth.uid
+        && request.resource.data.createdAt == request.time
+        && managedContentHasNewRevision(entryId);
+      allow update: if verifiedEmail() && isDirector()
+        && validManagedContent(entryId)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'data', 'archived', 'revision', 'updatedBy', 'updatedAt'
+        ])
+        && request.resource.data.revision == resource.data.revision + 1
+        && managedContentHasNewRevision(entryId);
+      allow delete: if false;
+
+      match /revisions/{revisionId} {
+        allow read: if verifiedEmail() && isDirector();
+        allow create: if verifiedEmail() && isDirector()
+          && validManagedRevision(entryId, revisionId);
+        allow update, delete: if false;
+      }
+    }
+
+    match /knowledgeCatalog/{bankId} {
+      allow read: if knowledgeMember();
+      allow create: if verifiedEmail() && isDirector()
+        && validKnowledgeCatalog(bankId) && request.resource.data.revision == 1;
+      allow update: if verifiedEmail() && isDirector()
+        && validKnowledgeCatalog(bankId)
+        && request.resource.data.bankId == resource.data.bankId
+        && request.resource.data.revision == resource.data.revision + 1;
+      allow delete: if false;
     }
 
     match /knowledgeBanks/{bankKey} {

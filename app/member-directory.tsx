@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { allSkills, learningAreas } from "./data";
+import { useContentCatalog } from "./content-context";
 import {
   watchAllEndorsements,
   watchAllMemberProfiles,
@@ -31,8 +31,6 @@ type DirectoryRow = {
   selfReportedSkillIds: string[];
 };
 
-const skillById = new Map(allSkills.map((skill) => [skill.id, skill]));
-
 function quoteCsv(value: unknown) {
   const text = String(value ?? "");
   return `"${text.replace(/"/g, '""')}"`;
@@ -51,13 +49,10 @@ function downloadCsv(filename: string, rows: string[][]) {
   URL.revokeObjectURL(href);
 }
 
-function skillNames(ids: string[]) {
-  return ids
-    .map((id) => skillById.get(id)?.title ?? id)
-    .sort((a, b) => a.localeCompare(b));
-}
-
 export default function MemberDirectory({ session }: { session: AuthSession }) {
+  const { allSkillsIncludingArchived, learningAreas } = useContentCatalog();
+  const skillById = useMemo(() => new Map(allSkillsIncludingArchived.map((skill) => [skill.id, skill])), [allSkillsIncludingArchived]);
+  const skillNames = (ids: string[]) => ids.map((id) => skillById.get(id)?.title ?? id).sort((a, b) => a.localeCompare(b));
   const isDirector = session.profile.role === "director";
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [profiles, setProfiles] = useState<MemberProfile[]>([]);
@@ -231,7 +226,7 @@ export default function MemberDirectory({ session }: { session: AuthSession }) {
         (skillSource !== "verified" && row.selfReportedSkillIds.includes(skillFilter));
       return matchesQuery && matchesRole && matchesInterest && matchesSkill;
     });
-  }, [interestFilter, query, roleFilter, rows, skillFilter, skillSource]);
+  }, [allSkillsIncludingArchived, interestFilter, query, roleFilter, rows, skillFilter, skillSource]);
 
   const exportRows = () => {
     const today = new Date().toISOString().slice(0, 10);

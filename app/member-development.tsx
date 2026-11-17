@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { allSkills, getSkillResources, learningAreas, type Skill } from "./data";
+import { getSkillResources, type Skill } from "./data";
+import { useContentCatalog } from "./content-context";
 import {
   readableFirebaseError,
   removeSelfReportedSkill,
@@ -39,10 +40,6 @@ const assignmentStatusLabels: Record<AssignmentStatus, string> = {
   complete: "Complete",
 };
 
-function skillAreaName(skill: Skill) {
-  return learningAreas.find((area) => area.id === skill.area)?.name ?? skill.area;
-}
-
 function skillResourceLabel(skill: Skill) {
   if (skill.resourceLabel) return `${skill.resourceLabel} ↗`;
   if (skill.internal) return "Open Teams resource ↗";
@@ -57,6 +54,8 @@ export default function MemberDevelopment({
   session: AuthSession;
   onOpenSkill: (areaId: string) => void;
 }) {
+  const { allSkills, allSkillsIncludingArchived, learningAreas, allAreasIncludingArchived } = useContentCatalog();
+  const skillAreaName = (skill: Skill) => allAreasIncludingArchived.find((area) => area.id === skill.area)?.name ?? skill.area;
   const profile = session.profile;
   const canAssign = profile.role === "mentor" || profile.role === "director";
   const canSelfReport = true;
@@ -456,7 +455,7 @@ export default function MemberDevelopment({
 
         <div className="assignment-grid">
           {visibleAssignments.map((assignment) => {
-            const skill = allSkills.find(
+            const skill = allSkillsIncludingArchived.find(
               (item) => item.id === assignment.skillId,
             );
             if (!skill) return null;
@@ -613,7 +612,7 @@ export default function MemberDevelopment({
               <div><span className="eyebrow">Your badge claims</span><h2>Reported skills</h2></div>
             </div>
             {ownReports.map((report) => {
-              const skill = allSkills.find((item) => item.id === report.skillId);
+              const skill = allSkillsIncludingArchived.find((item) => item.id === report.skillId);
               if (!skill) return null;
               const credential = credentials.find(
                 (item) => item.skillId === report.skillId,

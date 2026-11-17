@@ -1,13 +1,15 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
-import { allSkills, learningAreas } from "./data";
+import { useContentCatalog } from "./content-context";
+import KnowledgeEditor from "./knowledge-editor";
 import { readableFirebaseError, type AuthSession, type UserProfile } from "./firebase";
 import {
   bankKey,
   getKnowledgeBankForSkill,
-  knowledgeBanks,
+  visibleKnowledgeCatalog,
   type KnowledgeBank,
+  type KnowledgeCatalogEntry,
   type QuestionId,
 } from "./knowledge-catalog";
 import {
@@ -18,6 +20,7 @@ import {
   watchKnowledgeAttempts,
   watchKnowledgeReviews,
   watchPublishedBanks,
+  watchKnowledgeCatalog,
   watchReviewableMembers,
   type KnowledgeAttempt,
   type KnowledgeGuide,
@@ -29,7 +32,6 @@ import "./knowledge-checks.css";
 const questionIds: QuestionId[] = ["q1", "q2", "q3", "q4"];
 const emptyText = (): Record<QuestionId, string> => ({ q1: "", q2: "", q3: "", q4: "" });
 const emptyVerdicts = (): Record<QuestionId, "" | "correct" | "incorrect"> => ({ q1: "", q2: "", q3: "", q4: "" });
-const skillNames = new Map(allSkills.map((item) => [item.id, item.title]));
 
 function dateLabel(date: Date | null) {
   return date ? date.toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" }) : "Saving timestamp…";
@@ -293,63 +295,81 @@ function SetupChecks({ profile }: { profile: UserProfile }) {
 
 export default function KnowledgeChecks({ session, initialSkillId, onOpenSkill }: { session: AuthSession; initialSkillId?: string; onOpenSkill?: (skillId: string) => void }) {
   const profile = session.profile;
+  const { allSkills, allSkillsIncludingArchived, learningAreas } = useContentCatalog();
+  const skillNames = useMemo(() => new Map(allSkillsIncludingArchived.map((item) => [item.id, item.title])), [allSkillsIncludingArchived]);
   const reviewer = profile.role === "mentor" || profile.role === "director";
-  const [tab, setTab] = useState<"mine" | "review" | "setup">("mine");
+  const [tab, setTab] = useState<"mine" | "review" | "setup" | "manage">("mine");
   const [published, setPublished] = useState<KnowledgeBank[]>([]);
   const [publishedLoading, setPublishedLoading] = useState(true);
   const [publishedError, setPublishedError] = useState("");
+  const [catalogEntries, setCatalogEntries] = useState<KnowledgeCatalogEntry[]>([]);
+  const [catalogLoading, setCatalogLoading] = useState(true);
+  const [catalogError, setCatalogError] = useState("");
   const [attempts, setAttempts] = useState<KnowledgeAttempt[]>([]);
   const [attemptsLoading, setAttemptsLoading] = useState(true);
   const [attemptsError, setAttemptsError] = useState("");
-  const [selectedId, setSelectedId] = useState(() => getKnowledgeBankForSkill(initialSkillId ?? "")?.id ?? "");
+  const [selectedId, setSelectedId] = useState("");
+  const [selectedVersion, setSelectedVersion] = useState(0);
   const [selectedSkillId, setSelectedSkillId] = useState(initialSkillId ?? "");
   const [expandedId, setExpandedId] = useState("");
   const [search, setSearch] = useState("");
   const [area, setArea] = useState("all");
   const [formSequence, setFormSequence] = useState(0);
+  const initialSelection = useRef("");
   useEffect(() => {
     setPublished([]); setPublishedLoading(true); setPublishedError("");
     return watchPublishedBanks((items) => { setPublished(items); setPublishedLoading(false); }, (error) => { setPublishedError(error); setPublishedLoading(false); });
   }, [profile.uid, profile.role]);
   useEffect(() => {
+    setCatalogEntries([]); setCatalogLoading(true); setCatalogError("");
+    return watchKnowledgeCatalog((items) => { setCatalogEntries(items); setCatalogLoading(false); setCatalogError(""); }, (error) => { setCatalogError(error); setCatalogLoading(false); });
+  }, [profile.uid, profile.role]);
+  useEffect(() => {
     setAttempts([]); setAttemptsLoading(true); setAttemptsError(""); setExpandedId("");
     return watchKnowledgeAttempts(profile.uid, (items) => { setAttempts(items); setAttemptsLoading(false); }, (error) => { setAttemptsError(error); setAttemptsLoading(false); });
   }, [profile.uid]);
-  useEffect(() => {
-    if (!initialSkillId) return;
-    const bank = getKnowledgeBankForSkill(initialSkillId);
-    if (bank) { setSelectedId(bank.id); setSelectedSkillId(initialSkillId); setTab("mine"); setSearch(""); setArea("all"); }
-  }, [initialSkillId]);
   useEffect(() => { if (!reviewer) setTab("mine"); }, [reviewer]);
-  const catalog = useMemo(() => knowledgeBanks.map((draft) => published.find((item) => item.id === draft.id && item.version === draft.version) ?? draft), [published]);
+  const catalog = useMemo(() => visibleKnowledgeCatalog(published, catalogEntries), [published, catalogEntries]);
+  useEffect(() => {
+    if (!initialSkillId || publishedLoading || catalogLoading || initialSelection.current === initialSkillId) return;
+    const bank = getKnowledgeBankForSkill(initialSkillId, catalog);
+    if (bank) { initialSelection.current = initialSkillId; setSelectedId(bank.id); setSelectedVersion(bank.version); setSelectedSkillId(initialSkillId); setTab("mine"); setSearch(""); setArea("all"); }
+  }, [initialSkillId, catalog, publishedLoading, catalogLoading]);
   const publishedKeys = useMemo(() => new Set(published.map(bankKey)), [published]);
   const visibleBanks = catalog.filter((bank) => {
     const related = allSkills.filter((skill) => bank.skillIds.includes(skill.id));
     return (area === "all" || related.some((skill) => skill.area === area)) && `${bank.title} ${related.map((skill) => skill.title).join(" ")}`.toLowerCase().includes(search.trim().toLowerCase());
   });
-  const selectedBank = catalog.find((bank) => bank.id === selectedId);
+  const selectedArchived = catalogEntries.some((entry) => entry.bankId === selectedId && entry.archived);
+  const selectedBank = selectedArchived ? undefined : published.find((bank) => bank.id === selectedId && bank.version === selectedVersion) ?? catalog.find((bank) => bank.id === selectedId);
   const selectedPublished = selectedBank && publishedKeys.has(bankKey(selectedBank));
   const selectedSkill = selectedBank?.skillIds.includes(selectedSkillId) ? selectedSkillId : selectedBank?.skillIds[0] ?? "";
   const history = selectedBank ? attempts.filter((attempt) => attempt.bankId === selectedBank.id) : attempts;
+  const goToTab = (nextTab: typeof tab) => {
+    if (nextTab === tab || !window.dispatchEvent(new Event("dc-central-before-navigate", { cancelable: true }))) return;
+    setTab(nextTab);
+  };
 
   return <section className="knowledge-checks">
-    <header className="kc-heading"><span className="kc-kicker">Learn · explain · practice</span><h2>Knowledge checks</h2><p>30 shared checks cover 44 tutorials. Explain what you learned, get mentor feedback, and build a record of your improvement.</p></header>
+    <header className="kc-heading"><span className="kc-kicker">Learn · explain · practice</span><h2>Knowledge checks</h2><p>{catalog.length} shared checks cover {new Set(catalog.flatMap((bank) => bank.skillIds)).size} tutorials. Explain what you learned, get mentor feedback, and build a record of your improvement.</p></header>
     <div className="kc-tabs" role="group" aria-label="Knowledge-check views">
-      <button type="button" className={tab === "mine" ? "active" : ""} aria-pressed={tab === "mine"} onClick={() => setTab("mine")}>My checks</button>
-      {reviewer ? <button type="button" className={tab === "review" ? "active" : ""} aria-pressed={tab === "review"} onClick={() => setTab("review")}>Review submissions</button> : null}
-      {profile.role === "director" ? <button type="button" className={tab === "setup" ? "active" : ""} aria-pressed={tab === "setup"} onClick={() => setTab("setup")}>Set up checks</button> : null}
+      <button type="button" className={tab === "mine" ? "active" : ""} aria-pressed={tab === "mine"} onClick={() => goToTab("mine")}>My checks</button>
+      {reviewer ? <button type="button" className={tab === "review" ? "active" : ""} aria-pressed={tab === "review"} onClick={() => goToTab("review")}>Review submissions</button> : null}
+      {profile.role === "director" ? <button type="button" className={tab === "setup" ? "active" : ""} aria-pressed={tab === "setup"} onClick={() => goToTab("setup")}>Set up checks</button> : null}
+      {profile.role === "director" ? <button type="button" className={tab === "manage" ? "active" : ""} aria-pressed={tab === "manage"} onClick={() => goToTab("manage")}>Manage checks</button> : null}
     </div>
     {publishedError ? <p className="kc-error" role="alert">Knowledge checks could not load: {publishedError}</p> : null}
+    {catalogError ? <p className="kc-error" role="alert">Knowledge-check availability could not load: {catalogError}</p> : null}
     {tab === "mine" ? <>
       <p className="kc-note">{profile.role === "director" ? "Your faculty test attempts are private from mentors and mentees. " : ""}Every attempt starts ungraded. Mentors assess answers manually; passing a check does not automatically award Silver, Gold, or an endorsement.</p>
       <div className="kc-filters"><label>Find a check<input type="search" value={search} placeholder="Search tutorial or skill" onChange={(event) => setSearch(event.target.value)} /></label><label>Learning path<select value={area} onChange={(event) => setArea(event.target.value)}><option value="all">All learning paths</option>{learningAreas.map((path) => <option value={path.id} key={path.id}>{path.name}</option>)}</select></label></div>
-      {publishedLoading ? <p role="status">Checking which knowledge checks are installed…</p> : null}
+      {publishedLoading || catalogLoading ? <p role="status">Checking which knowledge checks are installed…</p> : null}
       {!publishedLoading && !publishedError && !published.length ? <p className="kc-pending">Knowledge checks are awaiting setup. A faculty director can open Set up checks and import the supplied private guide file.</p> : null}
-      {!selectedBank ? <div className="kc-bank-grid">{visibleBanks.map((bank) => <button type="button" key={bank.id} className={`kc-bank-card ${selectedId === bank.id ? "selected" : ""}`} aria-pressed={selectedId === bank.id} onClick={() => { setSelectedId(bank.id); setSelectedSkillId(bank.skillIds[0]); setExpandedId(""); setFormSequence((n) => n + 1); }}><span className="kc-kicker">4 questions · {bank.skillIds.length > 1 ? `${bank.skillIds.length} linked tutorials` : "1 tutorial"}</span><strong>{bank.title}</strong><span>{publishedKeys.has(bankKey(bank)) ? "Open knowledge check →" : "Preview topic · setup pending"}</span></button>)}</div> : <button type="button" className="kc-secondary" onClick={() => { setSelectedId(""); setExpandedId(""); }}>Choose a different knowledge check</button>}
+      {!selectedBank ? <div className="kc-bank-grid">{visibleBanks.map((bank) => <button type="button" key={bank.id} className={`kc-bank-card ${selectedId === bank.id ? "selected" : ""}`} aria-pressed={selectedId === bank.id} onClick={() => { setSelectedId(bank.id); setSelectedVersion(bank.version); setSelectedSkillId(bank.skillIds[0]); setExpandedId(""); setFormSequence((n) => n + 1); }}><span className="kc-kicker">4 questions · {bank.skillIds.length > 1 ? `${bank.skillIds.length} linked tutorials` : "1 tutorial"}</span><strong>{bank.title}</strong><span>{publishedKeys.has(bankKey(bank)) ? "Open knowledge check →" : "Preview topic · setup pending"}</span></button>)}</div> : <button type="button" className="kc-secondary" onClick={() => { setSelectedId(""); setSelectedVersion(0); setExpandedId(""); }}>Choose a different knowledge check</button>}
       {!selectedBank && !visibleBanks.length ? <p className="kc-pending">No checks match these filters.</p> : null}
       {selectedBank ? <>
         <section className="kc-selection-summary"><h3>{selectedBank.title}</h3><p>Shared by: {selectedBank.skillIds.map((id) => skillNames.get(id) ?? id).join(" · ")}</p>{onOpenSkill ? <button className="kc-text-button" type="button" onClick={() => onOpenSkill(selectedSkill)}>Find the tutorial in Learn →</button> : null}</section>
-        {selectedPublished && !publishedLoading && !publishedError ? <TakeKnowledgeCheck key={`${profile.uid}-${bankKey(selectedBank)}-${formSequence}`} profile={profile} bank={selectedBank} skillId={selectedSkill} onSubmitted={(id) => setExpandedId(id)} /> : <p className="kc-pending">This check cannot receive submissions until its saved question bank and private grading guide are installed.</p>}
+        {selectedPublished && !publishedLoading && !publishedError && !catalogLoading && !catalogError ? <TakeKnowledgeCheck key={`${profile.uid}-${bankKey(selectedBank)}-${formSequence}`} profile={profile} bank={selectedBank} skillId={selectedSkill} onSubmitted={(id) => setExpandedId(id)} /> : <p className="kc-pending">This check cannot receive submissions until its saved question bank, private grading guide, and availability are loaded.</p>}
       </> : null}
       <section className="kc-panel kc-history"><div className="kc-row"><h3>{selectedBank ? "Attempt history for this check" : "My attempt history"}</h3>{selectedBank ? <button className="kc-text-button" type="button" onClick={() => { setSelectedId(""); setExpandedId(""); }}>Show all checks</button> : null}</div><p>Original answers and all review revisions remain in your history. Open an attempt to see its feedback.</p>
         {attemptsError ? <p className="kc-error" role="alert">{attemptsError}</p> : attemptsLoading ? <p role="status">Loading saved attempts…</p> : !history.length ? <p className="kc-pending">No submitted attempts{selectedBank ? " for this check" : ""} yet.</p> : <ul className="kc-history-list">{history.map((attempt) => <li key={attempt.id}><button type="button" className="kc-history-toggle" aria-expanded={expandedId === attempt.id} onClick={() => setExpandedId((current) => current === attempt.id ? "" : attempt.id)}><span><strong>{findBank(published, attempt.bankKey)?.title ?? attempt.bankId}</strong><small>Version {attempt.version} · {dateLabel(attempt.createdAt)}</small></span><span>{expandedId === attempt.id ? "Close ↑" : "Answers & feedback ↓"}</span></button>{expandedId === attempt.id ? <LearnerAttempt key={attempt.id} attempt={attempt} bank={findBank(published, attempt.bankKey)} /> : null}</li>)}</ul>}
@@ -357,5 +377,6 @@ export default function KnowledgeChecks({ session, initialSkillId, onOpenSkill }
     </> : null}
     {tab === "review" && reviewer ? <ReviewQueue key={profile.uid} profile={profile} banks={published} /> : null}
     {tab === "setup" && profile.role === "director" ? <SetupChecks profile={profile} /> : null}
+    {tab === "manage" && profile.role === "director" ? <KnowledgeEditor profile={profile} published={published} catalogEntries={catalogEntries} loading={publishedLoading || catalogLoading} error={publishedError || catalogError} /> : null}
   </section>;
 }

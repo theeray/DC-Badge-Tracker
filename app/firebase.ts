@@ -1,6 +1,7 @@
 import { getApp, getApps, initializeApp } from "firebase/app";
 import {
   browserLocalPersistence,
+  connectAuthEmulator,
   createUserWithEmailAndPassword,
   getAuth,
   onIdTokenChanged,
@@ -15,6 +16,7 @@ import {
 } from "firebase/auth";
 import {
   collection,
+  connectFirestoreEmulator,
   deleteDoc,
   doc,
   getDoc,
@@ -31,6 +33,7 @@ import {
   type Unsubscribe,
 } from "firebase/firestore";
 import type { SkillStatus } from "./data";
+import { emulatorAutoSignInRole, emulatorBrowserConnection, useFirebaseEmulators } from "./firebase-environment";
 import {
   completeEmailRegistration,
   createAuthOperationBarrier,
@@ -48,13 +51,41 @@ const firebaseConfig = {
   measurementId: "G-WH0165EZ0Y",
 };
 
-const firebaseApp = getApps().length ? getApp() : initializeApp(firebaseConfig);
+const firebaseApp = getApps().length ? getApp() : initializeApp(useFirebaseEmulators ? {
+  ...firebaseConfig,
+  apiKey: "demo-dc-central-content-api-key",
+  authDomain: "demo-dc-central-content.firebaseapp.com",
+  projectId: "demo-dc-central-content",
+  storageBucket: "demo-dc-central-content.appspot.com",
+  appId: "demo-dc-central-content-web",
+} : firebaseConfig);
 export const auth = getAuth(firebaseApp);
 export const db = getFirestore(firebaseApp);
 const authOperations = createAuthOperationBarrier();
 
+if (useFirebaseEmulators) {
+  if (firebaseApp.options.projectId !== "demo-dc-central-content") {
+    throw new Error("Local emulator mode requires the isolated demo project.");
+  }
+  const connection = emulatorBrowserConnection();
+  if (!connection) throw new Error("The isolated demo emulators require a browser preview.");
+  // The local Vite proxy keeps SDK requests on the preview's existing origin;
+  // the backend targets are fixed loopback services in firebase.vite.config.ts.
+  connectAuthEmulator(auth, connection.authUrl);
+  connectFirestoreEmulator(db, connection.host, connection.port);
+}
+
 if (typeof window !== "undefined") {
-  void setPersistence(auth, browserLocalPersistence);
+  const persistenceReady = setPersistence(auth, browserLocalPersistence);
+  if (useFirebaseEmulators && emulatorAutoSignInRole) {
+    // Explicit local QA only. These reserved .invalid identities are fixtures,
+    // not campus accounts, and cannot sign in to the production Firebase app.
+    const email = `${emulatorAutoSignInRole}@dc-central.invalid`;
+    void persistenceReady.then(() => signInWithInstitutionalEmail(email, "Local-content-demo-only-2026!"))
+      .catch(() => console.error("The isolated local demo account could not sign in. Run the emulator fixture seed script."));
+  } else {
+    void persistenceReady;
+  }
 }
 
 export type AppRole = "mentee" | "mentor" | "director";

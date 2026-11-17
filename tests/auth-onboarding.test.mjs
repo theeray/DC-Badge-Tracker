@@ -161,6 +161,7 @@ function mockedFirebase(options = {}) {
       if (name === "firebase/auth") return authSdk;
       if (name === "firebase/firestore") return firestoreSdk;
       if (name === "./account-access") return access;
+      if (name === "./firebase-environment") return { useFirebaseEmulators: false, emulatorAutoSignInRole: null };
       throw new Error(`Unexpected dependency: ${name}`);
     },
   });

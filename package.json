@@ -6,7 +6,7 @@
     "node": ">=22.13.0"
   },
   "scripts": {
-    "dev": "vite --config firebase.vite.config.ts",
+    "dev": "node scripts/dev-emulators.mjs",
     "build": "npm run typecheck:firebase && npm run build:firebase",
     "build:firebase": "vite build --config firebase.vite.config.ts",
     "deploy:firebase": "npm run test && npx --yes firebase-tools@15.28.2 deploy --only firestore,hosting",
@@ -16,10 +16,10 @@
     "preview": "vite preview --config firebase.vite.config.ts",
     "test": "npm run test:auth && npm run test:catalog && npm run test:knowledge && npm run test:availability && npm run build",
     "test:auth": "node --experimental-strip-types --test tests/auth-onboarding.test.mjs",
-    "test:catalog": "node --experimental-strip-types --test tests/tutorial-catalog.test.mjs tests/tutorial-navigation.test.mjs",
-    "test:knowledge": "node --experimental-strip-types --test tests/knowledge-catalog.test.mjs",
+    "test:catalog": "node --experimental-strip-types --test tests/tutorial-catalog.test.mjs tests/tutorial-navigation.test.mjs tests/content-catalog.test.mjs",
+    "test:knowledge": "node --experimental-strip-types --test tests/knowledge-catalog.test.mjs tests/knowledge-authoring.test.mjs",
     "test:availability": "node --test tests/availability-scheduling.test.mjs",
-    "test:rules": "npx --yes firebase-tools@15.28.2 emulators:exec --project digital-corps-badge-tracker-rules-test --only firestore \"node --test tests/firestore.rules.test.mjs tests/knowledge-rules.test.mjs tests/auto-approval.rules.test.mjs\"",
+    "test:rules": "npx --yes firebase-tools@15.28.2 emulators:exec --project digital-corps-badge-tracker-rules-test --only firestore \"node --test tests/firestore.rules.test.mjs tests/knowledge-rules.test.mjs tests/auto-approval.rules.test.mjs tests/content-rules.test.mjs tests/content-publishing-integration.test.mjs\"",
     "typecheck:firebase": "tsc --project tsconfig.firebase.json"
   },
   "dependencies": {

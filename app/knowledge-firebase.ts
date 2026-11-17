@@ -1,11 +1,11 @@
 import {
   collection, doc, getDoc, getDocs, limit, onSnapshot, orderBy, query,
-  serverTimestamp, setDoc, where, writeBatch, type DocumentData,
+  runTransaction, serverTimestamp, setDoc, where, writeBatch, type DocumentData,
 } from "firebase/firestore";
 import { db, readableFirebaseError, watchAllUsers, watchMentees, type AppRole, type UserProfile } from "./firebase";
 import {
   bankKey, boundedText, exactKeys, isRecord, knowledgeBanks, knowledgeScore,
-  questionIds, validKnowledgeBank, type KnowledgeBank, type QuestionId, type QuestionValues,
+  questionIds, validKnowledgeBank, type KnowledgeBank, type KnowledgeCatalogEntry, type QuestionId, type QuestionValues,
 } from "./knowledge-catalog";
 
 export type KnowledgeAttempt = {
@@ -70,6 +70,97 @@ export function watchPublishedBanks(onChange: (banks: KnowledgeBank[]) => void, 
     try { onChange(snapshot.docs.map((item) => bankFromDocument(item.data()))); }
     catch (error) { onError(readableFirebaseError(error)); }
   }, (error) => onError(readableFirebaseError(error)));
+}
+
+export function watchKnowledgeCatalog(onChange: (entries: KnowledgeCatalogEntry[]) => void, onError: (error: string) => void) {
+  return onSnapshot(collection(db, "knowledgeCatalog"), (snapshot) => {
+    try {
+      onChange(snapshot.docs.map((item) => {
+        const data = item.data();
+        if (data.bankId !== item.id || typeof data.archived !== "boolean"
+          || !Number.isInteger(data.revision) || data.revision < 1 || data.revision > 100000) {
+          throw new Error("A knowledge-check catalog setting is invalid. Contact a faculty director.");
+        }
+        return { bankId: item.id, archived: data.archived, revision: data.revision };
+      }));
+    } catch (error) { onError(readableFirebaseError(error)); }
+  }, (error) => onError(readableFirebaseError(error)));
+}
+
+function requireKnowledgeDirector(profile: UserProfile) {
+  if (!profile.active || profile.role !== "director") throw new Error("Only an active faculty director can manage knowledge checks.");
+}
+
+export function validKnowledgeSourceUrl(value: string) {
+  if (!boundedText(value, 1000) || /[\\\s\u0000-\u001f\u007f]/.test(value)) return false;
+  try {
+    const url = new URL(value);
+    return url.protocol === "https:" && !!url.hostname && !url.username && !url.password;
+  } catch { return false; }
+}
+
+export async function publishKnowledgeCheck(
+  profile: UserProfile,
+  bank: KnowledgeBank,
+  guide: KnowledgeGuide,
+  expectedLatestVersion: number,
+  expectedCatalogRevision: number,
+) {
+  requireKnowledgeDirector(profile);
+  if (!Number.isInteger(expectedLatestVersion) || expectedLatestVersion < 0 || expectedLatestVersion >= 1000
+    || !Number.isInteger(expectedCatalogRevision) || expectedCatalogRevision < 0 || expectedCatalogRevision >= 100000
+    || bank.version !== expectedLatestVersion + 1 || !validKnowledgeBank(bank)
+    || !validKnowledgeSourceUrl(bank.sourceUrl) || !validKnowledgeGuide(guide)
+    || guide.bankId !== bank.id || guide.version !== bank.version) {
+    throw new Error("Complete the four questions and private answer guide, with a valid HTTPS source and linked tutorials. A new version is required for every change.");
+  }
+  const key = bankKey(bank);
+  await runTransaction(db, async (transaction) => {
+    const catalogReference = doc(db, "knowledgeCatalog", bank.id);
+    const bankReference = doc(db, "knowledgeBanks", key);
+    const guideReference = doc(db, "knowledgeGuides", key);
+    const [catalog, existingBank, existingGuide] = await Promise.all([
+      transaction.get(catalogReference), transaction.get(bankReference), transaction.get(guideReference),
+    ]);
+    if ((catalog.exists() ? catalog.data().revision : 0) !== expectedCatalogRevision || existingBank.exists() || existingGuide.exists()) {
+      throw new Error("Another director changed this check. Reload its latest version before publishing; your original answers and history have not been changed.");
+    }
+    if (expectedLatestVersion > 0) {
+      const previous = await transaction.get(doc(db, "knowledgeBanks", bankKey({ id: bank.id, version: expectedLatestVersion })));
+      if (!previous.exists()) throw new Error("The previous published version is missing. Reload the check before publishing.");
+    }
+    transaction.set(bankReference, {
+      bankId: bank.id, version: bank.version, title: bank.title, skillIds: bank.skillIds,
+      sourceUrl: bank.sourceUrl, scope: bank.scope,
+      questions: Object.fromEntries(bank.questions.map(({ id, prompt, topic }) => [id, { prompt, topic }])),
+      createdBy: profile.uid, createdAt: serverTimestamp(),
+    });
+    transaction.set(guideReference, { ...guide, createdBy: profile.uid, createdAt: serverTimestamp() });
+    transaction.set(catalogReference, {
+      bankId: bank.id, archived: false, revision: expectedCatalogRevision + 1,
+      updatedBy: profile.uid, updatedAt: serverTimestamp(),
+    });
+  });
+  return key;
+}
+
+export async function setKnowledgeCheckArchived(profile: UserProfile, bankId: string, archived: boolean, expectedCatalogRevision: number) {
+  requireKnowledgeDirector(profile);
+  if (!boundedText(bankId, 80) || !/^[a-z0-9]+(-[a-z0-9]+)*$/.test(bankId) || typeof archived !== "boolean"
+    || !Number.isInteger(expectedCatalogRevision) || expectedCatalogRevision < 0 || expectedCatalogRevision >= 100000) {
+    throw new Error("Choose a saved knowledge check to archive or restore.");
+  }
+  await runTransaction(db, async (transaction) => {
+    const reference = doc(db, "knowledgeCatalog", bankId);
+    const existing = await transaction.get(reference);
+    if ((existing.exists() ? existing.data().revision : 0) !== expectedCatalogRevision) {
+      throw new Error("Another director changed this check. Reload its current status and try again.");
+    }
+    transaction.set(reference, {
+      bankId, archived, revision: expectedCatalogRevision + 1,
+      updatedBy: profile.uid, updatedAt: serverTimestamp(),
+    });
+  });
 }
 
 export function watchKnowledgeAttempts(ownerId: string, onChange: (attempts: KnowledgeAttempt[]) => void, onError: (error: string) => void, viewerRole?: AppRole) {
@@ -155,7 +246,7 @@ export async function saveKnowledgeReview(profile: UserProfile, ownerId: string,
 
 export function validKnowledgeGuide(value: unknown): value is KnowledgeGuide {
   if (!isRecord(value) || !exactKeys(value, ["bankId", "version", "questions"])) return false;
-  return boundedText(value.bankId, 80) && /^[a-z0-9-]+$/.test(value.bankId)
+  return boundedText(value.bankId, 80) && /^[a-z0-9]+(-[a-z0-9]+)*$/.test(value.bankId)
     && Number.isInteger(value.version) && Number(value.version) >= 1 && Number(value.version) <= 1000
     && isRecord(value.questions) && exactKeys(value.questions, questionIds)
     && questionIds.every((id: QuestionId) => {

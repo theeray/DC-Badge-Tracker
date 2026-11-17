@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useContentCatalog } from "./content-context";
 import {
   readableFirebaseError,
   saveMemberProfile,
@@ -75,48 +76,11 @@ const agenda = [
   },
 ] as const;
 
-const resources = [
-  {
-    label: "How to use DC Central",
-    detail: "Start an interactive tour of profiles, tutorials, badges, hours, assignments, and meetings",
-    href: "#dc-central-tour",
-  },
-  {
-    label: "Digital Corps job request form",
-    detail: "Official form used by campus clients to request work",
-    href: "https://www.bemidjistate.edu/offices/digital-corps/digital-corps-job-request-form/",
-  },
-  {
-    label: "Digital Corps website",
-    detail: "Services, office information, and public overview",
-    href: "https://www.bemidjistate.edu/offices/digital-corps/",
-  },
-  {
-    label: "Microsoft Teams",
-    detail: "Open the Digital Corps team and Planner",
-    href: "https://teams.microsoft.com/",
-  },
-  {
-    label: "File organization guide",
-    detail: "Shared project-folder and file-naming practices",
-    href: "/resources/onboarding/file-organization-guide.pdf",
-  },
-  {
-    label: "Client meeting checklist",
-    detail: "Before, during, and after a client meeting",
-    href: "/resources/onboarding/client-meeting-checklist.docx",
-  },
-  {
-    label: "Digital Corps feedback form",
-    detail: "Share feedback about the program or a project",
-    href: "https://forms.office.com/Pages/ResponsePage.aspx?id=xscRULQKq0ae9PrnSpIaf9TFJ9abpYdIiFBiYwCBywtUMlJTUUJLRTgwM0RUUElYUlhKTVRJRDkwSC4u",
-  },
-  {
-    label: "Student and faculty spotlight form",
-    detail: "Submit a campus spotlight idea",
-    href: "https://forms.office.com/Pages/ResponsePage.aspx?id=xscRULQKq0ae9PrnSpIaf4SaSyf2EjhJvVeK5SXL8tBUNUNaQVJTS0JDV1JCTE5LNjJTUFJOQ0hVTy4u",
-  },
-] as const;
+const tourResource = {
+  label: "How to use DC Central",
+  detail: "Start an interactive tour of profiles, tutorials, badges, hours, assignments, and meetings",
+  href: "#dc-central-tour",
+};
 
 function parseList(value: string) {
   return value
@@ -136,6 +100,8 @@ export default function OnboardingHub({
   onRequireSignIn: () => void;
   onStartTour: () => void;
 }) {
+  const { resources: managedResources } = useContentCatalog();
+  const resources = [tourResource, ...managedResources.filter((item) => item.section === "onboarding").map((item) => ({ label: item.title, detail: item.description, href: item.href }))];
   const [draft, setDraft] = useState<ProfileDraft>(emptyProfile);
   const [workInterestsText, setWorkInterestsText] = useState("");
   const [specialtiesText, setSpecialtiesText] = useState("");

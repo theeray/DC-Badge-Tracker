@@ -18,6 +18,14 @@ The director roster includes activated profiles that have no manual approval rec
 
 The application never stores passwords. Firebase Authentication handles password hashing, reset links, and verification emails.
 
+## Faculty content editor
+
+Active, verified faculty directors can maintain tutorials, learning paths, practice projects, and onboarding/brand-resource links through **Content editor**. Each publication atomically saves a current `managedContent/{kind}--{key}` record and an immutable director-only revision. Archive/restore and republishing earlier versions preserve stable IDs and student records. Current managed content is readable only by active verified members; signed-out visitors use bundled resources.
+
+**Knowledge checks → Manage checks** creates immutable question-bank/answer-guide versions and reversible `knowledgeCatalog/{bankId}` availability records. Answer keys remain in private `knowledgeGuides`, not in the shared content catalog. Archiving blocks new submissions but retains historical attempts and reviews. No Cloud Functions, new paid services, file uploads, or deployment credentials are added to the app.
+
+See [the director handover guide](../docs/DIRECTOR_HANDOVER.md) for the editable fields, recovery options, infrastructure permissions, and deployment steps.
+
 ## Deploying account-access changes
 
 From an authenticated Firebase CLI session, run `FIREBASE_HOSTING_UPLOAD_CONCURRENCY=1 npm run deploy:firebase:access`. This runs the application tests and build, publishes the Firestore rules, then publishes only the main `dc-central` Hosting site. It does not reset accounts or records, change billing, or replace the older sites' redirects. Review the rules and pilot the two allowed domains before a broader rollout.

@@ -6,6 +6,7 @@ import {
   CalendarClock,
   ClipboardCheck,
   Clock3,
+  FilePenLine,
   GraduationCap,
   House,
   Medal,
@@ -19,15 +20,16 @@ import MemberDevelopment from "./member-development";
 import OnboardingHub from "./onboarding-hub";
 import SkillsDashboard from "./skills-dashboard";
 import TimeTracker from "./time-tracker";
+import { ContentProvider, useContentCatalog } from "./content-context";
 
 const DCAvailability = lazy(() => import("./dc-availability"));
 const KnowledgeChecks = lazy(() => import("./knowledge-checks"));
-import { getKnowledgeBankForSkill } from "./knowledge-catalog";
+const ContentEditor = lazy(() => import("./content-editor"));
+import { getKnowledgeBankForSkill, visibleKnowledgeCatalog, type KnowledgeBank, type KnowledgeCatalogEntry } from "./knowledge-catalog";
+import { watchKnowledgeCatalog, watchPublishedBanks } from "./knowledge-firebase";
 import {
-  allSkills,
+  allSkills as bundledSkills,
   getSkillResources,
-  learningAreas,
-  projectBriefs,
   statusLabels,
   statusOrder,
   type ProjectBrief,
@@ -87,11 +89,11 @@ type TourGeometry = {
 const SELF_TRACKING_ID = "__self__";
 
 const defaultStatuses = Object.fromEntries(
-  allSkills.map((item) => [item.id, "not-started"]),
+  bundledSkills.map((item) => [item.id, "not-started"]),
 ) as Record<string, SkillStatus>;
 
 const defaultEndorsements = Object.fromEntries(
-  allSkills.map((item) => [item.id, 0]),
+  bundledSkills.map((item) => [item.id, 0]),
 ) as Record<string, number>;
 
 const iconForArea: Record<string, string> = {
@@ -213,148 +215,10 @@ const brandGuides = [
   { id: "tad", name: "TAD · Technology, Art & Design", label: "Available", enabled: true },
 ] as const;
 
-const digitalCorpsAssets = [
-  {
-    title: "Digital Corps Branding Guide",
-    description: "The complete reference for logo use, colors, typography, pattern, and applications.",
-    format: "PDF · 432 KB",
-    kind: "Guide",
-    href: "/downloads/digital-corps/digital-corps-brand-guide.pdf",
-  },
-  {
-    title: "Digital Corps Logo Package",
-    description: "Primary, secondary, horizontal, symbol, white, Lab Corps, and Studio Corps artwork.",
-    format: "ZIP · 8.8 MB",
-    kind: "Logos",
-    href: "/downloads/digital-corps/digital-corps-logos.zip",
-  },
-  {
-    title: "Geometric Pattern",
-    description: "Editable Illustrator source for the official repeating Digital Corps pattern.",
-    format: "AI · 328 KB",
-    kind: "Pattern",
-    href: "/downloads/digital-corps/digital-corps-geometric-pattern.ai",
-  },
-  {
-    title: "Abrade ExtraBold",
-    description: "The approved display typeface file for branded headlines and high-impact copy.",
-    format: "ZIP · 56 KB",
-    kind: "Type",
-    href: "/downloads/digital-corps/digital-corps-typeface.zip",
-  },
-  {
-    title: "Lower Thirds",
-    description: "Left- and right-aligned After Effects packages with linked Illustrator artwork.",
-    format: "ZIP · 2.3 MB",
-    kind: "Motion",
-    href: "/downloads/digital-corps/digital-corps-lower-thirds.zip",
-  },
-  {
-    title: "Logo Reveal",
-    description: "After Effects source, linked logo artwork, and a rendered MP4 reference.",
-    format: "ZIP · 1.4 MB",
-    kind: "Motion",
-    href: "/downloads/digital-corps/digital-corps-logo-reveal.zip",
-  },
-] as const;
-
-const bsuAcademicAssets = [
-  {
-    title: "2020 BSU Brand Guide",
-    description: "The 44-page academic identity guide, optimized for reliable in-app viewing and download.",
-    format: "PDF · 8.9 MB",
-    kind: "Guide",
-    href: "/downloads/bsu-academics/bsu-brand-guide-2020.pdf",
-  },
-  {
-    title: "Academic Logo Suite",
-    description: "The full academic logo set in AI, EPS, PDF, PNG, and JPG formats, plus the 2020 color palette reference.",
-    format: "ZIP · 23.9 MB",
-    kind: "Logos",
-    href: "/downloads/bsu-academics/bsu-academic-logos.zip",
-  },
-  {
-    title: "Academic Typefaces",
-    description: "The supplied Whitney family plus Adobe Garamond and Minion Pro document fonts.",
-    format: "ZIP · 777 KB",
-    kind: "Type",
-    href: "/downloads/bsu-academics/bsu-academic-typefaces.zip",
-  },
-  {
-    title: "Patterns & Pine Assets",
-    description: "Bark, ice, rock, pines, crop texture, and solo-tree source assets from the academic system.",
-    format: "ZIP · 3.8 MB",
-    kind: "Pattern",
-    href: "/downloads/bsu-academics/bsu-academic-patterns.zip",
-  },
-  {
-    title: "Icon Source Samples",
-    description: "Editable examples for building icons in the approved geometric academic style.",
-    format: "ZIP · 3.3 MB",
-    kind: "Icons",
-    href: "/downloads/bsu-academics/bsu-icon-source-samples.zip",
-  },
-] as const;
-
 const athleticsAssets = [
   { src: "/brand/bsu-athletics/football.jpg", label: "Historic football photograph" },
   { src: "/brand/bsu-athletics/img-1970s-womens-field-hockey2.jpg", label: "1970s women’s field hockey photograph" },
   { src: "/brand/bsu-athletics/istock-498506367.jpg", label: "Volleyball athlete photograph" },
-] as const;
-
-const bsuAthleticsDownloadAssets = [
-  {
-    title: "Athletics Logo Package",
-    description: "Beaver icon, BSU Beaver lockups, baseball monogram, and the supplied athletics identity reference PDF.",
-    format: "ZIP · 1.4 MB",
-    kind: "Logos",
-    href: "/downloads/bsu-athletics/bsu-athletics-logo-package.zip",
-  },
-  {
-    title: "Bucky Mascot Vectors",
-    description: "Green, Pantone, outline, grayscale, three-color, and five-color Bucky Illustrator artwork.",
-    format: "ZIP · 21.0 MB",
-    kind: "Mascot",
-    href: "/downloads/bsu-athletics/bsu-bucky-mascot-vectors.zip",
-  },
-  {
-    title: "Reserved Sports Imagery",
-    description: "Football, women’s field hockey, and volleyball photographs kept out of the academic toolkit.",
-    format: "ZIP · 10.9 MB",
-    kind: "Photos",
-    href: "/downloads/bsu-athletics/bsu-athletics-reserved-imagery.zip",
-  },
-] as const;
-
-const tadAssets = [
-  {
-    title: "TAD Branding Guidelines",
-    description: "The official 2024 single-page guide for logos, Futura PT typography, colors, and accessibility.",
-    format: "PDF · 496 KB",
-    kind: "Guide",
-    href: "/downloads/tad/tad-brand-guidelines-2024.pdf",
-  },
-  {
-    title: "TAD Logo Package",
-    description: "Color, black-and-white, icon, horizontal, transparent, and editable vector logo versions.",
-    format: "ZIP · 1.7 MB",
-    kind: "Logos",
-    href: "/downloads/tad/tad-logo-package.zip",
-  },
-  {
-    title: "Alphabet & Linktree Logos",
-    description: "Four-page Illustrator source containing the TAD alphabet system and Linktree logo artwork.",
-    format: "AI · 1.3 MB",
-    kind: "Vector",
-    href: "/downloads/tad/tad-alphabet-linktree-logos.ai",
-  },
-  {
-    title: "Bridgeman Practice Image",
-    description: "Compressed download containing the layered Bridgeman Hall PSD for TAD design exercises and composites.",
-    format: "ZIP · 21.9 MB",
-    kind: "Photo",
-    href: "/downloads/tad/bridgeman-practice-image.zip",
-  },
 ] as const;
 
 function ExternalArrow() {
@@ -383,7 +247,7 @@ function AssetLibrary({ title, description, assets }: { title: string; descripti
             <div className="asset-kind"><span>{String(index + 1).padStart(2, "0")}</span><b>{asset.kind}</b></div>
             <h3>{asset.title}</h3>
             <p>{asset.description}</p>
-            <footer><span>{asset.format}</span><a href={asset.href} download aria-label={`Download ${asset.title}`}>Download <b>↓</b></a></footer>
+            <footer><span>{asset.format}</span><a href={asset.href} download target={asset.href.startsWith("https://") ? "_blank" : undefined} rel="noreferrer" aria-label={`Download ${asset.title}`}>Download <b>↓</b></a></footer>
           </article>
         ))}
       </div>
@@ -562,17 +426,17 @@ function ProjectModal({ project, onClose }: { project: ProjectBrief; onClose: ()
           {project.assets ? (
             <section>
               <div className="section-heading"><span>04</span><h3>Photo pack</h3></div>
-              <p className="section-copy">Nine client-supplied orchestra photographs are ready to use in the flyer and social post.</p>
+              <p className="section-copy">{project.assets.length} reference asset{project.assets.length === 1 ? " is" : "s are"} available for this practice project.</p>
               <div className="asset-grid">
                 {project.assets.slice(0, 6).map((asset) => (
-                  <img key={asset} src={`/project-assets/orchestra/${asset}`} alt="Orchestra reference photograph" />
+                  <img key={asset} src={asset.startsWith("/") || asset.startsWith("https://") ? asset : `/project-assets/orchestra/${asset}`} alt="Practice project reference photograph" />
                 ))}
               </div>
             </section>
           ) : null}
 
           <footer className="modal-footer">
-            <a className="primary-button" href={project.briefHref} download>Download original brief <span>↓</span></a>
+            <a className="primary-button" href={project.briefHref} download target={project.briefHref.startsWith("https://") ? "_blank" : undefined} rel="noreferrer">Download original brief <span>↓</span></a>
             {project.assetHref ? <a className="secondary-button" href={project.assetHref} download>Download photo pack <span>↓</span></a> : null}
           </footer>
         </div>
@@ -627,14 +491,16 @@ export default function Tracker() {
   }
 
   return (
-    <TrackerWorkspace
-      session={session}
-      onRequireSignIn={() => setBrowsing(false)}
-      onSignOut={async () => {
-        await signOutCurrentUser();
-        setBrowsing(false);
-      }}
-    />
+    <ContentProvider session={session}>
+      <TrackerWorkspace
+        session={session}
+        onRequireSignIn={() => setBrowsing(false)}
+        onSignOut={async () => {
+          await signOutCurrentUser();
+          setBrowsing(false);
+        }}
+      />
+    </ContentProvider>
   );
 }
 
@@ -647,6 +513,15 @@ function TrackerWorkspace({
   onRequireSignIn: () => void;
   onSignOut: () => Promise<void>;
 }) {
+  const { learningAreas, allAreasIncludingArchived, allSkills, allSkillsIncludingArchived, projectBriefs, resources, error: contentError } = useContentCatalog();
+  const digitalCorpsAssets = resources.filter((item) => item.section === "digital-corps");
+  const bsuAcademicAssets = resources.filter((item) => item.section === "bsu-academics");
+  const bsuAthleticsDownloadAssets = resources.filter((item) => item.section === "bsu-athletics");
+  const tadAssets = resources.filter((item) => item.section === "tad");
+  const dcGuide = resources.find((item) => item.id === "digital-corps-digital-corps-branding-guide");
+  const academicGuide = resources.find((item) => item.id === "bsu-academics-2020-bsu-brand-guide");
+  const athleticsLogos = resources.find((item) => item.id === "bsu-athletics-athletics-logo-package");
+  const tadGuide = resources.find((item) => item.id === "tad-tad-branding-guidelines");
   const role: Role = session?.profile.role ?? "guest";
   const [view, setView] = useState<View>(() =>
     window.location.hash.startsWith("#availability") ? "dc-meet" : "overview",
@@ -671,13 +546,27 @@ function TrackerWorkspace({
   const [undoBusy, setUndoBusy] = useState(false);
   const [tourStep, setTourStep] = useState<number | null>(null);
   const [knowledgeSkillId, setKnowledgeSkillId] = useState<string | undefined>();
+  const [publishedKnowledgeBanks, setPublishedKnowledgeBanks] = useState<KnowledgeBank[]>([]);
+  const [knowledgeCatalogEntries, setKnowledgeCatalogEntries] = useState<KnowledgeCatalogEntry[]>([]);
+  const availableKnowledgeBanks = useMemo(() => visibleKnowledgeCatalog(publishedKnowledgeBanks, knowledgeCatalogEntries), [publishedKnowledgeBanks, knowledgeCatalogEntries]);
   const [syncState, setSyncState] = useState<"loading" | "saved" | "guest" | "error">(
     role === "guest" ? "guest" : "loading",
   );
 
   useEffect(() => {
+    setPublishedKnowledgeBanks([]);
+    setKnowledgeCatalogEntries([]);
+    if (!session?.profile.active || !session.user.emailVerified) return;
+    const reportError = (error: string) => setAnnouncement(error);
+    const stopBanks = watchPublishedBanks(setPublishedKnowledgeBanks, reportError);
+    const stopCatalog = watchKnowledgeCatalog(setKnowledgeCatalogEntries, reportError);
+    return () => { stopBanks(); stopCatalog(); };
+  }, [session?.profile.uid, session?.profile.active, session?.profile.role, session?.user.emailVerified]);
+
+  useEffect(() => {
     const openSharedPoll = () => {
       if (window.location.hash.startsWith("#availability")) {
+        if (!window.dispatchEvent(new Event("dc-central-before-navigate", { cancelable: true }))) return;
         setView("dc-meet");
       }
     };
@@ -825,14 +714,18 @@ function TrackerWorkspace({
     };
   }, [role, session?.profile.uid, targetMenteeId]);
 
-  const completeCount = allSkills.filter((item) => statuses[item.id] === "complete").length;
+  const completeCount = allSkillsIncludingArchived.filter((item) => statuses[item.id] === "complete").length;
   const readyCount = allSkills.filter((item) => statuses[item.id] === "ready").length;
   const verifiedSkillCount = new Set([
     ...endorsementRecords.map((record) => record.skillId),
     ...credentialRecords.map((record) => record.skillId),
   ]).size;
   const activeArea = learningAreas.find((area) => area.id === view);
+  const firstLearningPath = learningAreas.find((area) => area.id === "onboarding")?.id ?? learningAreas[0]?.id ?? "overview";
   const activeGroups = activeArea ? ["All skills", ...new Set(activeArea.skills.map((item) => item.group))] : [];
+  useEffect(() => {
+    if (activeArea && selectedGroup !== "All skills" && !activeArea.skills.some((item) => item.group === selectedGroup)) setSelectedGroup("All skills");
+  }, [activeArea, selectedGroup]);
   const activeAssignmentSkillIds = useMemo(
     () =>
       new Set(
@@ -898,9 +791,10 @@ function TrackerWorkspace({
         tutorialFilter === itemStatus;
       return matchesGroup && matchesQuery && matchesStatus;
     });
-  }, [activeArea, activeAssignmentSkillIds, query, selectedGroup, statuses, tutorialFilter]);
+  }, [activeArea, activeAssignmentSkillIds, allSkills, learningAreas, query, selectedGroup, statuses, tutorialFilter]);
 
   const setActiveView = (next: View) => {
+    if (!window.dispatchEvent(new Event("dc-central-before-navigate", { cancelable: true }))) return false;
     setView(next);
     if (next === "dc-meet") {
       if (!window.location.hash.startsWith("#availability")) {
@@ -912,13 +806,14 @@ function TrackerWorkspace({
     setSelectedGroup("All skills");
     setTutorialFilter("all");
     setQuery("");
+    return true;
   };
 
   const tourSteps = useMemo<TourStep[]>(() => {
     const steps: TourStep[] = [
       { target: "overview", view: "overview", title: "Home dashboard", description: "Start here for a quick view of tutorial progress, badges awaiting review, verified skills, and your next useful action." },
       { target: "start", view: "new-hire-onboarding", title: "Start and member profile", description: "New hires use Start for the onboarding agenda, account guidance, uniforms, team resources, and the member profile managers use to build teams." },
-      { target: "learn", view: "onboarding", title: "Tutorial learning paths", description: "Learn contains every tutorial. Choose a path, search or filter the list, open the training link, and record your own progress on each tutorial." },
+      { target: "learn", view: firstLearningPath, title: "Tutorial learning paths", description: "Learn contains every tutorial. Choose a path, search or filter the list, open the training link, and record your own progress on each tutorial." },
       { target: "projects", view: "projects", title: "Practice projects", description: "Projects turn tutorials into portfolio-style work. Open a brief, download its resources, and use it to practice a real Digital Corps workflow." },
       { target: "brand", view: "brand-guides", title: "Brand guides and assets", description: "Brand contains the official Digital Corps, BSU, Athletics, and TAD guidance and downloadable production files. Check it before designing for a campus identity." },
     ];
@@ -931,7 +826,7 @@ function TrackerWorkspace({
       );
     }
     return steps;
-  }, [role, session]);
+  }, [firstLearningPath, role, session]);
 
   const moveTour = (nextIndex: number) => {
     if (nextIndex < 0) return;
@@ -939,7 +834,7 @@ function TrackerWorkspace({
       setTourStep(null);
       return;
     }
-    setActiveView(tourSteps[nextIndex].view);
+    if (!setActiveView(tourSteps[nextIndex].view)) return;
     setTourStep(nextIndex);
   };
 
@@ -947,7 +842,7 @@ function TrackerWorkspace({
 
   const advanceStatus = async (item: Skill) => {
     if (!isSelfTracking || !targetMenteeId) return;
-    const current = statuses[item.id];
+    const current = statuses[item.id] ?? "not-started";
     const next = statusOrder[(statusOrder.indexOf(current) + 1) % statusOrder.length];
     const nextStatuses = { ...statuses, [item.id]: next };
     setStatuses(nextStatuses);
@@ -1188,7 +1083,7 @@ function TrackerWorkspace({
             </button>
           ) : null}
           {session ? (
-            <button className={view === "knowledge-checks" ? "active" : ""} onClick={() => { setKnowledgeSkillId(undefined); setActiveView("knowledge-checks"); }}>
+            <button className={view === "knowledge-checks" ? "active" : ""} onClick={() => { if (setActiveView("knowledge-checks")) setKnowledgeSkillId(undefined); }}>
               <span className="nav-index" aria-hidden="true"><ClipboardCheck /></span><span>Knowledge checks</span>
             </button>
           ) : null}
@@ -1203,10 +1098,16 @@ function TrackerWorkspace({
             </button>
           ) : null}
 
+          {role === "director" ? (
+            <button className={view === "content-editor" ? "active" : ""} onClick={() => setActiveView("content-editor")}>
+              <span className="nav-index" aria-hidden="true"><FilePenLine /></span><span>Content editor</span>
+            </button>
+          ) : null}
+
           <p className="nav-label">Learning paths</p>
-          {learningAreas.map((area) => (
-            <button data-tour={area.id === "onboarding" ? "learn" : undefined} key={area.id} className={view === area.id ? "active" : ""} onClick={() => setActiveView(area.id)}>
-              <span className="nav-index">{iconForArea[area.id]}</span><span>{area.shortName}</span>
+          {learningAreas.map((area, areaIndex) => (
+            <button data-tour={area.id === firstLearningPath ? "learn" : undefined} key={area.id} className={view === area.id ? "active" : ""} onClick={() => setActiveView(area.id)}>
+              <span className="nav-index">{iconForArea[area.id] ?? String(areaIndex + 1).padStart(2, "0")}</span><span>{area.shortName}</span>
               <em>{area.skills.length}</em>
             </button>
           ))}
@@ -1262,7 +1163,7 @@ function TrackerWorkspace({
             {session ? (
               <>
                 <div className="user-chip"><span>{initials}</span><div><strong>{displayName}</strong><small>{roleLabel}</small></div></div>
-                <button className="sign-out-button" onClick={() => void onSignOut()}>Sign out</button>
+                <button className="sign-out-button" onClick={() => { if (window.dispatchEvent(new Event("dc-central-before-navigate", { cancelable: true }))) void onSignOut(); }}>Sign out</button>
               </>
             ) : (
               <button className="sign-in-button" onClick={onRequireSignIn}>Sign in to track progress</button>
@@ -1271,6 +1172,8 @@ function TrackerWorkspace({
         </header>
 
         <div className="content-wrap">
+          {contentError && session ? <p className="time-message" role="alert">Content updates could not load. Bundled resources remain available. {contentError}</p> : null}
+          {!activeArea && allAreasIncludingArchived.some((area) => area.id === view) ? <section className="empty-state"><h2>This learning path is archived</h2><p>Your saved progress is retained. Choose an available learning path from Learn, or ask a faculty director about this path.</p><button className="primary-button" type="button" onClick={() => setActiveView(learningAreas[0]?.id ?? "overview")}>Browse available tutorials</button></section> : null}
           {view === "overview" ? (
             <>
               <section className="hero-card">
@@ -1299,7 +1202,7 @@ function TrackerWorkspace({
                         : "Browse tutorials, practice projects, and official brand resources. Sign in to save progress."}
                   </p>
                   <div className="hero-actions">
-                    <button className="primary-button" onClick={() => setActiveView(isSelfTracking ? "content-creation" : "onboarding")}>
+                    <button className="primary-button" onClick={() => setActiveView(isSelfTracking && learningAreas.some((area) => area.id === "content-creation") ? "content-creation" : firstLearningPath)}>
                       {isSelfTracking
                         ? "Continue learning"
                         : isReviewingMember
@@ -1311,14 +1214,14 @@ function TrackerWorkspace({
                 </div>
                 <ProgressRing
                   completed={completeCount}
-                  total={allSkills.length}
+                  total={allSkillsIncludingArchived.length}
                   verifiedSkills={verifiedSkillCount}
                 />
                 <div className="hero-pattern" aria-hidden="true" />
               </section>
 
               <section className="stat-grid" aria-label="Progress summary">
-                <article><span className="stat-icon green">✓</span><div><strong>{completeCount}</strong><span>Tutorials completed</span></div><small>of {allSkills.length}</small></article>
+                <article><span className="stat-icon green">✓</span><div><strong>{completeCount}</strong><span>Tutorials completed</span></div><small>of {allSkillsIncludingArchived.length}</small></article>
                 <article><span className="stat-icon orange">◎</span><div><strong>{readyCount}</strong><span>Ready for review</span></div><small>mentor queue</small></article>
                 <article><span className="stat-icon mint">✦</span><div><strong>{verifiedSkillCount}</strong><span>Verified skills</span></div><small>endorsed or faculty confirmed</small></article>
               </section>
@@ -1390,6 +1293,12 @@ function TrackerWorkspace({
             <AdminPanel currentDirector={session.profile} />
           ) : null}
 
+          {view === "content-editor" && role === "director" && session ? (
+            <Suspense fallback={<p className="empty-state">Opening content editor…</p>}>
+              <ContentEditor session={session} />
+            </Suspense>
+          ) : null}
+
           {view === "new-hire-onboarding" ? (
             <OnboardingHub session={session} onRequireSignIn={onRequireSignIn} onStartTour={startTour} />
           ) : null}
@@ -1411,7 +1320,7 @@ function TrackerWorkspace({
           {view === "knowledge-checks" && session ? (
             <Suspense fallback={<p className="empty-state">Opening knowledge checks…</p>}>
               <KnowledgeChecks key={`${session.profile.uid}_${knowledgeSkillId ?? "all"}`} session={session} initialSkillId={knowledgeSkillId} onOpenSkill={(skillId) => {
-                const skill = allSkills.find((item) => item.id === skillId);
+                const skill = allSkillsIncludingArchived.find((item) => item.id === skillId);
                 if (skill) setActiveView(skill.area);
               }} />
             </Suspense>
@@ -1476,12 +1385,12 @@ function TrackerWorkspace({
               </div>
 
               {query.trim() ? (
-                <p className="global-search-note" id="tutorial-search-scope">Searching all four learning paths. Clear the search to browse the selected skill category.</p>
+                <p className="global-search-note" id="tutorial-search-scope">Searching all learning paths. Clear the search to browse the selected skill category.</p>
               ) : null}
 
               <section className="skills-list">
                 {visibleSkills.map((item) => {
-                  const itemStatus = statuses[item.id];
+                  const itemStatus = statuses[item.id] ?? "not-started";
                   const isEndorsed = sessionEndorsed.includes(item.id);
                   const selfReport = selfReportedSkills.find(
                     (report) => report.skillId === item.id,
@@ -1572,7 +1481,7 @@ function TrackerWorkspace({
                         </div>
                         <h3>{item.title}</h3>
                         <SkillResource item={item} />
-                        {session && getKnowledgeBankForSkill(item.id) ? (
+                        {session && getKnowledgeBankForSkill(item.id, availableKnowledgeBanks) ? (
                           <button type="button" className="resource-link knowledge-check-link" onClick={() => {
                             setKnowledgeSkillId(item.id);
                             setActiveView("knowledge-checks");
@@ -1676,7 +1585,7 @@ function TrackerWorkspace({
                   <section className="brand-foundations">
                     <div className="brand-foundations-heading">
                       <div><span className="eyebrow">Digital Corps</span><h2>Core brand foundations</h2><p>Keep the system recognizable, accessible, and consistent across print, social, motion, and environmental work.</p></div>
-                      <a className="primary-button" href="/downloads/digital-corps/digital-corps-brand-guide.pdf" download>Download complete guide <span>↓</span></a>
+                      {dcGuide ? <a className="primary-button" href={dcGuide.href} download target={dcGuide.href.startsWith("https://") ? "_blank" : undefined} rel="noreferrer">Download complete guide <span>↓</span></a> : null}
                     </div>
 
                     <div className="foundation-grid">
@@ -1726,7 +1635,7 @@ function TrackerWorkspace({
                   <section className="brand-foundations bsu-foundations">
                     <div className="brand-foundations-heading">
                       <div><span className="eyebrow">BSU Academics</span><h2>Academic brand foundations</h2><p>This collection follows the 2020 Bemidji State University academic guide. Athletics files are intentionally excluded and reserved in their own section.</p></div>
-                      <a className="primary-button" href="/downloads/bsu-academics/bsu-brand-guide-2020.pdf" target="_blank" rel="noreferrer">Open complete guide <ExternalArrow /></a>
+                      {academicGuide ? <a className="primary-button" href={academicGuide.href} target="_blank" rel="noreferrer">Open complete guide <ExternalArrow /></a> : null}
                     </div>
 
                     <div className="foundation-grid">
@@ -1777,7 +1686,7 @@ function TrackerWorkspace({
                   <section className="athletics-reserved-section">
                     <div className="athletics-reserved-heading">
                       <div><span className="eyebrow">BSU Athletics</span><h2>Athletics identity & reserved imagery</h2><p>The Beaver and Bucky files are now organized as athletics-only assets. The three sports photographs remain excluded from every BSU academic download.</p></div>
-                      <a className="primary-button" href="/downloads/bsu-athletics/bsu-athletics-logo-package.zip" download>Download athletics logos <span>↓</span></a>
+                      {athleticsLogos ? <a className="primary-button" href={athleticsLogos.href} download target={athleticsLogos.href.startsWith("https://") ? "_blank" : undefined} rel="noreferrer">Download athletics logos <span>↓</span></a> : null}
                     </div>
                     <div className="athletics-identity-summary">
                       <img src="/brand/bsu-athletics/bsu-beaver-icon.png" alt="BSU Beaver icon" />
@@ -1799,7 +1708,7 @@ function TrackerWorkspace({
                   <section className="brand-foundations tad-foundations">
                     <div className="brand-foundations-heading">
                       <div><span className="eyebrow">Technology, Art & Design</span><h2>TAD brand foundations</h2><p>The 2024 system connects the school’s technology, art, design, and project disciplines through modular letterforms and a bright pillar palette.</p></div>
-                      <a className="primary-button" href="/downloads/tad/tad-brand-guidelines-2024.pdf" target="_blank" rel="noreferrer">Open complete guide <ExternalArrow /></a>
+                      {tadGuide ? <a className="primary-button" href={tadGuide.href} target="_blank" rel="noreferrer">Open complete guide <ExternalArrow /></a> : null}
                     </div>
 
                     <div className="foundation-grid">
@@ -1854,7 +1763,7 @@ function TrackerWorkspace({
         <div className="mobile-nav" aria-label="Mobile navigation">
           <button data-tour="overview" className={view === "overview" ? "active" : ""} onClick={() => setActiveView("overview")}><span className="mobile-nav-icon" aria-hidden="true"><House /></span>Home</button>
           <button data-tour="start" className={view === "new-hire-onboarding" ? "active" : ""} onClick={() => setActiveView("new-hire-onboarding")}><span className="mobile-nav-icon" aria-hidden="true"><UserPlus /></span>Start</button>
-          <button data-tour="learn" className={learningAreas.some((area) => area.id === view) ? "active" : ""} onClick={() => setActiveView("onboarding")}><span className="mobile-nav-icon" aria-hidden="true"><GraduationCap /></span>Learn</button>
+          <button data-tour="learn" className={learningAreas.some((area) => area.id === view) ? "active" : ""} onClick={() => setActiveView(firstLearningPath)}><span className="mobile-nav-icon" aria-hidden="true"><GraduationCap /></span>Learn</button>
           <button data-tour="projects" className={view === "projects" ? "active" : ""} onClick={() => setActiveView("projects")}><span className="mobile-nav-icon" aria-hidden="true"><ClipboardCheck /></span>Projects</button>
           <button data-tour="brand" className={view === "brand-guides" ? "active" : ""} onClick={() => setActiveView("brand-guides")}><span className="mobile-nav-icon" aria-hidden="true"><BookOpen /></span>Brand</button>
           {session ? (
@@ -1867,13 +1776,16 @@ function TrackerWorkspace({
             <button data-tour="assigned" className={view === "member-development" ? "active" : ""} onClick={() => setActiveView("member-development")}><span className="mobile-nav-icon" aria-hidden="true"><Medal /></span>Assigned</button>
           ) : null}
           {session ? (
-            <button className={view === "knowledge-checks" ? "active" : ""} onClick={() => { setKnowledgeSkillId(undefined); setActiveView("knowledge-checks"); }}><span className="mobile-nav-icon" aria-hidden="true"><ClipboardCheck /></span>Checks</button>
+            <button className={view === "knowledge-checks" ? "active" : ""} onClick={() => { if (setActiveView("knowledge-checks")) setKnowledgeSkillId(undefined); }}><span className="mobile-nav-icon" aria-hidden="true"><ClipboardCheck /></span>Checks</button>
           ) : null}
           {session ? (
             <button data-tour="team" className={view === "skills-dashboard" ? "active" : ""} onClick={() => setActiveView("skills-dashboard")}><span className="mobile-nav-icon" aria-hidden="true"><Users /></span>{role === "mentee" ? "Mentors" : "Team"}</button>
           ) : null}
           {role === "director" ? (
             <button className={view === "admin" ? "active" : ""} onClick={() => setActiveView("admin")}><span className="mobile-nav-icon" aria-hidden="true"><Settings /></span>Admin</button>
+          ) : null}
+          {role === "director" ? (
+            <button className={view === "content-editor" ? "active" : ""} onClick={() => setActiveView("content-editor")}><span className="mobile-nav-icon" aria-hidden="true"><FilePenLine /></span>Edit content</button>
           ) : null}
         </div>
       </main>

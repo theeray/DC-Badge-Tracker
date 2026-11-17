@@ -15,6 +15,12 @@ export type KnowledgeBank = {
   questions: { id: QuestionId; prompt: string; topic: string }[];
 };
 
+export type KnowledgeCatalogEntry = {
+  bankId: string;
+  archived: boolean;
+  revision: number;
+};
+
 export function bankKey(bank: Pick<KnowledgeBank, "id" | "version">) {
   return `${bank.id}_v${bank.version}`;
 }
@@ -37,7 +43,7 @@ export function boundedText(value: unknown, max: number, allowBlank = false): va
 
 export function validKnowledgeBank(value: unknown): value is KnowledgeBank {
   if (!isRecord(value) || !exactKeys(value, ["id", "title", "version", "skillIds", "sourceUrl", "scope", "questions"])) return false;
-  return boundedText(value.id, 80) && /^[a-z0-9-]+$/.test(value.id)
+  return boundedText(value.id, 80) && /^[a-z0-9]+(-[a-z0-9]+)*$/.test(value.id)
     && boundedText(value.title, 160)
     && Number.isInteger(value.version) && Number(value.version) >= 1 && Number(value.version) <= 1000
     && Array.isArray(value.skillIds) && value.skillIds.length > 0 && value.skillIds.length <= 10
@@ -56,8 +62,25 @@ const drafts: unknown[] = [...onboarding, ...design, ...production];
 if (!drafts.every(validKnowledgeBank)) throw new Error("A knowledge-check definition is invalid.");
 export const knowledgeBanks: KnowledgeBank[] = drafts;
 
-export function getKnowledgeBankForSkill(skillId: string) {
-  return knowledgeBanks.find((bank) => bank.skillIds.includes(skillId));
+export function visibleKnowledgeCatalog(
+  published: readonly KnowledgeBank[],
+  entries: readonly KnowledgeCatalogEntry[] = [],
+  includeArchived = false,
+) {
+  const latest = new Map<string, KnowledgeBank>();
+  for (const bank of [...knowledgeBanks, ...published]) {
+    if (!validKnowledgeBank(bank)) continue;
+    const existing = latest.get(bank.id);
+    // A saved question bank takes precedence over the bundled preview of the
+    // same version. Old versions remain available separately for history.
+    if (!existing || bank.version >= existing.version) latest.set(bank.id, bank);
+  }
+  const archived = new Set(entries.filter((entry) => entry.archived).map((entry) => entry.bankId));
+  return [...latest.values()].filter((bank) => includeArchived || !archived.has(bank.id));
+}
+
+export function getKnowledgeBankForSkill(skillId: string, banks: readonly KnowledgeBank[] = knowledgeBanks) {
+  return banks.find((bank) => bank.skillIds.includes(skillId));
 }
 
 export function knowledgeScore(verdicts: QuestionValues<"correct" | "incorrect">) {
