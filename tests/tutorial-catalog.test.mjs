@@ -55,6 +55,71 @@ test("an orientation document can be a second resource on the same badge without
   assert.equal(resources[1].label, "Camera orientation document");
 });
 
+test("supplied camera guides have distinct Photography IDs, companion PDFs, and no default badge", () => {
+  const fixtures = [
+    {
+      id: "cc-camera-orientation",
+      title: "Digital Corps Camera Orientation",
+      filename: "digital-corps-camera-orientation.pdf",
+      label: "Open camera orientation PDF",
+      companion: "digital-corps-photography-skills-guide.pdf",
+    },
+    {
+      id: "cc-photography-skills-guide",
+      title: "Photography Skills Guide",
+      filename: "digital-corps-photography-skills-guide.pdf",
+      label: "Open photography skills guide PDF",
+      companion: "digital-corps-camera-orientation.pdf",
+    },
+  ];
+  const base = "https://raw.githubusercontent.com/theeray/DC-Badge-Tracker/main/public/resources/photography/";
+  for (const fixture of fixtures) {
+    const item = findSkill(fixture.id);
+    assert.equal(item.title, fixture.title);
+    assert.equal(item.area, "content-creation");
+    assert.equal(item.group, "Photography");
+    assert.equal(item.href, `${base}${fixture.filename}`);
+    assert.equal(item.resourceLabel, fixture.label);
+    assert.match(item.resourceNote, /official supervision and training are required/i);
+    assert.equal(Object.hasOwn(item, "tier"), false, "Reading a guide must not assign a badge level");
+    assert.deepEqual(item.additionalResources?.map((resource) => resource.href), [`${base}${fixture.companion}`]);
+    assert.equal(getSkillResources(item).length, 2);
+  }
+  assert.match(findSkill("cc-camera-orientation").resourceNote, /Sony a7 IV.*verified backups.*equipment return/i);
+  assert.match(findSkill("cc-photography-skills-guide").resourceNote, /beginner, intermediate, and advanced/i);
+  assert.match(findSkill("cc-photography-skills-guide").resourceNote, /do not automatically award badges/i);
+});
+
+test("camera guide additions preserve all 90 existing tutorial IDs and their progress references", () => {
+  const addedIds = new Set(["cc-camera-orientation", "cc-photography-skills-guide"]);
+  const existingIds = allSkills.filter((item) => !addedIds.has(item.id)).map((item) => item.id).sort();
+  assert.equal(existingIds.length, 90);
+  // Snapshot of stable IDs before the two camera guides; progress, endorsements,
+  // and assignments continue referring to these exact identifiers.
+  assert.equal(
+    createHash("sha256").update(existingIds.join("\n")).digest("hex"),
+    "bad98c2e8f0c8b9042b7410c638490b28a36180e5b06716be33421ac034ee9f2",
+    "Do not remove or rename an existing tutorial when adding camera guides",
+  );
+});
+
+test("existing camera and headshot lessons retain their primary resources while linking both guides", () => {
+  const fixtures = [
+    ["cc-camera", "https://support.d-imaging.sony.co.jp/support/ilc/autofocus/ilce7m4/en/03.php"],
+    ["cc-headshots", "https://alphauniverse.com/stories/gear--settings-and-more-go-behind-the-scenes-of-a-pro-studio-portrait-shoot/"],
+  ];
+  for (const [id, href] of fixtures) {
+    const item = findSkill(id);
+    assert.equal(item.href, href);
+    assert.equal(getSkillResources(item)[0].href, href);
+    assert.deepEqual(item.additionalResources?.map((resource) => resource.href), [
+      findSkill("cc-camera-orientation").href,
+      findSkill("cc-photography-skills-guide").href,
+    ]);
+    assert.ok(item.additionalResources.length <= 6);
+  }
+});
+
 test("existing tutorial and Teams link labels remain available", () => {
   assert.equal(getSkillResources(findSkill("on-payroll"))[0].label, "Open tutorial");
   assert.equal(getSkillResources(findSkill("on-brand"))[0].label, "Open Teams resource");

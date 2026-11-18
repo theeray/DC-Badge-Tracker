@@ -136,10 +136,28 @@ export const learningAreas: LearningArea[] = [
         searchTerms: ["typography", "Figma", "leading", "line height", "widows", "orphans"],
       }),
 
+      skill(CONTENT, "Photography", "cc-camera-orientation", "Digital Corps Camera Orientation", {
+        href: "https://raw.githubusercontent.com/theeray/DC-Badge-Tracker/main/public/resources/photography/digital-corps-camera-orientation.pdf",
+        resourceLabel: "Open camera orientation PDF",
+        resourceNote: "Shared Sony a7 IV setup, exposure, autofocus, headshots, Lightroom import/export, verified backups, and equipment return. Official supervision and training are required before using Digital Corps equipment.",
+        additionalResources: [{ label: "Open photography skills guide PDF", href: "https://raw.githubusercontent.com/theeray/DC-Badge-Tracker/main/public/resources/photography/digital-corps-photography-skills-guide.pdf" }],
+        searchTerms: ["camera orientation", "Sony a7 IV", "a7iv", "exposure", "autofocus", "headshots", "Lightroom", "backup", "equipment return"],
+      }),
+      skill(CONTENT, "Photography", "cc-photography-skills-guide", "Photography Skills Guide", {
+        href: "https://raw.githubusercontent.com/theeray/DC-Badge-Tracker/main/public/resources/photography/digital-corps-photography-skills-guide.pdf",
+        resourceLabel: "Open photography skills guide PDF",
+        resourceNote: "Beginner, intermediate, and advanced photography lessons with practice in exposure, lenses, focus, lighting, editing, flash, tethering, and backup. These learning levels do not automatically award badges. Official supervision and training are required for Digital Corps equipment use.",
+        additionalResources: [{ label: "Open camera orientation PDF", href: "https://raw.githubusercontent.com/theeray/DC-Badge-Tracker/main/public/resources/photography/digital-corps-camera-orientation.pdf" }],
+        searchTerms: ["photography", "beginner", "intermediate", "advanced", "exposure triangle", "portraits", "RAW", "Lightroom", "flash", "tethering"],
+      }),
       skill(CONTENT, "Photography", "cc-headshots", "Headshots", {
         href: "https://alphauniverse.com/stories/gear--settings-and-more-go-behind-the-scenes-of-a-pro-studio-portrait-shoot/",
         resourceLabel: "Portrait lighting & 24–105mm tutorial",
         resourceNote: "Uses the Sony 24–105mm f/4 G lens on a different Sony body. For our a7 IV controls, also open Use the Digital Corps Camera. Confirm the studio light and trigger with a mentor before shooting.",
+        additionalResources: [
+          { label: "Open camera orientation PDF", href: "https://raw.githubusercontent.com/theeray/DC-Badge-Tracker/main/public/resources/photography/digital-corps-camera-orientation.pdf" },
+          { label: "Open photography skills guide PDF", href: "https://raw.githubusercontent.com/theeray/DC-Badge-Tracker/main/public/resources/photography/digital-corps-photography-skills-guide.pdf" },
+        ],
         searchTerms: ["head shots", "portraits", "studio lighting", "Sony a7 IV", "24-105", "70-200"],
       }),
       skill(CONTENT, "Photography", "cc-lighting", "Lighting Studio", { href: "https://www.iorad.com/player/2455074/Light-an-Object-and-or-Product-with-the-Lighting-Studio-Light-Box-" }),
@@ -147,6 +165,10 @@ export const learningAreas: LearningArea[] = [
         href: "https://support.d-imaging.sony.co.jp/support/ilc/autofocus/ilce7m4/en/03.php",
         resourceLabel: "Sony a7 IV: Face & Eye AF setup",
         resourceNote: "Sony’s step-by-step guide for focusing on a person’s eyes with our a7 IV (ILCE-7M4). Use this alongside the Headshots lighting tutorial.",
+        additionalResources: [
+          { label: "Open camera orientation PDF", href: "https://raw.githubusercontent.com/theeray/DC-Badge-Tracker/main/public/resources/photography/digital-corps-camera-orientation.pdf" },
+          { label: "Open photography skills guide PDF", href: "https://raw.githubusercontent.com/theeray/DC-Badge-Tracker/main/public/resources/photography/digital-corps-photography-skills-guide.pdf" },
+        ],
         searchTerms: ["headshots", "head shots", "portrait", "Sony a7 IV", "a7iv", "ILCE-7M4", "autofocus", "eye AF"],
       }),
       skill(CONTENT, "Photography", "cc-lapel", "Wireless Lapel Microphone", { href: "https://www.iorad.com/player/2620488/Use-the-Wireless-Lapel-Mic-with-the-Digital-Corps-Camera" }),
