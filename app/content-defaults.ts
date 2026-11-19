@@ -211,6 +211,15 @@ export const defaultContentResources: ContentResource[] = [
     "kind": "Resource"
   },
   {
+    "id": "onboarding-camera-and-lens-checkout-agreement",
+    "section": "onboarding",
+    "title": "Camera and lens checkout agreement",
+    "description": "Fillable form for Digital Corps equipment approval, checkout condition, responsibilities, and return inspection",
+    "href": "/resources/photography/digital-corps-camera-lens-checkout-agreement.pdf",
+    "format": "Fillable PDF",
+    "kind": "Form"
+  },
+  {
     "id": "onboarding-digital-corps-feedback-form",
     "section": "onboarding",
     "title": "Digital Corps feedback form",

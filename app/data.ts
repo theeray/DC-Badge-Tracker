@@ -140,15 +140,31 @@ export const learningAreas: LearningArea[] = [
         href: "https://raw.githubusercontent.com/theeray/DC-Badge-Tracker/main/public/resources/photography/digital-corps-camera-orientation.pdf",
         resourceLabel: "Open camera orientation PDF",
         resourceNote: "Shared Sony a7 IV setup, exposure, autofocus, headshots, Lightroom import/export, verified backups, and equipment return. Official supervision and training are required before using Digital Corps equipment.",
-        additionalResources: [{ label: "Open photography skills guide PDF", href: "https://raw.githubusercontent.com/theeray/DC-Badge-Tracker/main/public/resources/photography/digital-corps-photography-skills-guide.pdf" }],
+        additionalResources: [
+          { label: "Open photography skills guide PDF", href: "https://raw.githubusercontent.com/theeray/DC-Badge-Tracker/main/public/resources/photography/digital-corps-photography-skills-guide.pdf" },
+          { label: "Open fillable camera checkout agreement", href: "/resources/photography/digital-corps-camera-lens-checkout-agreement.pdf" },
+        ],
         searchTerms: ["camera orientation", "Sony a7 IV", "a7iv", "exposure", "autofocus", "headshots", "Lightroom", "backup", "equipment return"],
       }),
       skill(CONTENT, "Photography", "cc-photography-skills-guide", "Photography Skills Guide", {
         href: "https://raw.githubusercontent.com/theeray/DC-Badge-Tracker/main/public/resources/photography/digital-corps-photography-skills-guide.pdf",
         resourceLabel: "Open photography skills guide PDF",
         resourceNote: "Beginner, intermediate, and advanced photography lessons with practice in exposure, lenses, focus, lighting, editing, flash, tethering, and backup. These learning levels do not automatically award badges. Official supervision and training are required for Digital Corps equipment use.",
-        additionalResources: [{ label: "Open camera orientation PDF", href: "https://raw.githubusercontent.com/theeray/DC-Badge-Tracker/main/public/resources/photography/digital-corps-camera-orientation.pdf" }],
+        additionalResources: [
+          { label: "Open camera orientation PDF", href: "https://raw.githubusercontent.com/theeray/DC-Badge-Tracker/main/public/resources/photography/digital-corps-camera-orientation.pdf" },
+          { label: "Open fillable camera checkout agreement", href: "/resources/photography/digital-corps-camera-lens-checkout-agreement.pdf" },
+        ],
         searchTerms: ["photography", "beginner", "intermediate", "advanced", "exposure triangle", "portraits", "RAW", "Lightroom", "flash", "tethering"],
+      }),
+      skill(CONTENT, "Photography", "cc-camera-checkout", "Camera and Lens Checkout Agreement", {
+        href: "/resources/photography/digital-corps-camera-lens-checkout-agreement.pdf",
+        resourceLabel: "Open fillable checkout agreement",
+        resourceNote: "Complete this form with an approving mentor, director, or supervisor before equipment leaves its normal storage area. Save the completed copy and finish the return inspection when the equipment comes back.",
+        additionalResources: [
+          { label: "Open camera orientation PDF", href: "https://raw.githubusercontent.com/theeray/DC-Badge-Tracker/main/public/resources/photography/digital-corps-camera-orientation.pdf" },
+          { label: "Open photography skills guide PDF", href: "https://raw.githubusercontent.com/theeray/DC-Badge-Tracker/main/public/resources/photography/digital-corps-photography-skills-guide.pdf" },
+        ],
+        searchTerms: ["camera checkout", "lens checkout", "equipment agreement", "fillable PDF", "equipment return", "damage", "borrow", "loan"],
       }),
       skill(CONTENT, "Photography", "cc-headshots", "Headshots", {
         href: "https://alphauniverse.com/stories/gear--settings-and-more-go-behind-the-scenes-of-a-pro-studio-portrait-shoot/",
@@ -157,6 +173,7 @@ export const learningAreas: LearningArea[] = [
         additionalResources: [
           { label: "Open camera orientation PDF", href: "https://raw.githubusercontent.com/theeray/DC-Badge-Tracker/main/public/resources/photography/digital-corps-camera-orientation.pdf" },
           { label: "Open photography skills guide PDF", href: "https://raw.githubusercontent.com/theeray/DC-Badge-Tracker/main/public/resources/photography/digital-corps-photography-skills-guide.pdf" },
+          { label: "Open fillable camera checkout agreement", href: "/resources/photography/digital-corps-camera-lens-checkout-agreement.pdf" },
         ],
         searchTerms: ["head shots", "portraits", "studio lighting", "Sony a7 IV", "24-105", "70-200"],
       }),
@@ -168,6 +185,7 @@ export const learningAreas: LearningArea[] = [
         additionalResources: [
           { label: "Open camera orientation PDF", href: "https://raw.githubusercontent.com/theeray/DC-Badge-Tracker/main/public/resources/photography/digital-corps-camera-orientation.pdf" },
           { label: "Open photography skills guide PDF", href: "https://raw.githubusercontent.com/theeray/DC-Badge-Tracker/main/public/resources/photography/digital-corps-photography-skills-guide.pdf" },
+          { label: "Open fillable camera checkout agreement", href: "/resources/photography/digital-corps-camera-lens-checkout-agreement.pdf" },
         ],
         searchTerms: ["headshots", "head shots", "portrait", "Sony a7 IV", "a7iv", "ILCE-7M4", "autofocus", "eye AF"],
       }),

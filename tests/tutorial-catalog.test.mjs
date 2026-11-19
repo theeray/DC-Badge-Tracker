@@ -82,16 +82,19 @@ test("supplied camera guides have distinct Photography IDs, companion PDFs, and 
     assert.equal(item.resourceLabel, fixture.label);
     assert.match(item.resourceNote, /official supervision and training are required/i);
     assert.equal(Object.hasOwn(item, "tier"), false, "Reading a guide must not assign a badge level");
-    assert.deepEqual(item.additionalResources?.map((resource) => resource.href), [`${base}${fixture.companion}`]);
-    assert.equal(getSkillResources(item).length, 2);
+    assert.deepEqual(item.additionalResources?.map((resource) => resource.href), [
+      `${base}${fixture.companion}`,
+      "/resources/photography/digital-corps-camera-lens-checkout-agreement.pdf",
+    ]);
+    assert.equal(getSkillResources(item).length, 3);
   }
   assert.match(findSkill("cc-camera-orientation").resourceNote, /Sony a7 IV.*verified backups.*equipment return/i);
   assert.match(findSkill("cc-photography-skills-guide").resourceNote, /beginner, intermediate, and advanced/i);
   assert.match(findSkill("cc-photography-skills-guide").resourceNote, /do not automatically award badges/i);
 });
 
-test("camera guide additions preserve all 90 existing tutorial IDs and their progress references", () => {
-  const addedIds = new Set(["cc-camera-orientation", "cc-photography-skills-guide"]);
+test("camera resource additions preserve all 90 existing tutorial IDs and their progress references", () => {
+  const addedIds = new Set(["cc-camera-orientation", "cc-photography-skills-guide", "cc-camera-checkout"]);
   const existingIds = allSkills.filter((item) => !addedIds.has(item.id)).map((item) => item.id).sort();
   assert.equal(existingIds.length, 90);
   // Snapshot of stable IDs before the two camera guides; progress, endorsements,
@@ -103,7 +106,7 @@ test("camera guide additions preserve all 90 existing tutorial IDs and their pro
   );
 });
 
-test("existing camera and headshot lessons retain their primary resources while linking both guides", () => {
+test("existing camera and headshot lessons retain their primary resources while linking both guides and the checkout form", () => {
   const fixtures = [
     ["cc-camera", "https://support.d-imaging.sony.co.jp/support/ilc/autofocus/ilce7m4/en/03.php"],
     ["cc-headshots", "https://alphauniverse.com/stories/gear--settings-and-more-go-behind-the-scenes-of-a-pro-studio-portrait-shoot/"],
@@ -115,9 +118,21 @@ test("existing camera and headshot lessons retain their primary resources while 
     assert.deepEqual(item.additionalResources?.map((resource) => resource.href), [
       findSkill("cc-camera-orientation").href,
       findSkill("cc-photography-skills-guide").href,
+      findSkill("cc-camera-checkout").href,
     ]);
     assert.ok(item.additionalResources.length <= 6);
   }
+});
+
+test("the Digital Corps camera checkout form is a distinct fillable PDF resource without a default badge", () => {
+  const item = findSkill("cc-camera-checkout");
+  assert.equal(item.group, "Photography");
+  assert.equal(item.area, "content-creation");
+  assert.equal(item.href, "/resources/photography/digital-corps-camera-lens-checkout-agreement.pdf");
+  assert.match(item.resourceLabel, /fillable checkout agreement/i);
+  assert.match(item.resourceNote, /approving mentor, director, or supervisor/i);
+  assert.equal(Object.hasOwn(item, "tier"), false);
+  assert.equal(readFileSync(new URL(`../public${item.href}`, import.meta.url)).subarray(0, 5).toString(), "%PDF-");
 });
 
 test("existing tutorial and Teams link labels remain available", () => {
