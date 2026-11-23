@@ -73,6 +73,13 @@ export const learningAreas: LearningArea[] = [
     skills: [
       skill(ONBOARDING, "Training & Skill Building", "on-work-study-eligibility", "Check Work-Study Eligibility", { href: "https://www.iorad.com/player/2450841/Check-to-see-if-you-are-eligible-for-Work-Study---Payroll-at-Bemidji-State-University" }),
       skill(ONBOARDING, "Training & Skill Building", "on-payroll", "Work Study & Payroll Paperwork", { href: "https://www.iorad.com/player/2432928/Fill-Out-Work-Study---Payroll-Paperwork-for-Digital-Corps", searchTerms: ["fill out paperwork", "filling out the paperwork", "regular payroll"] }),
+      skill(ONBOARDING, "Training & Skill Building", "on-job-intake-delivery", "Job Intake & Delivery Flowchart", {
+        href: "/resources/onboarding/digital-corps-flow-chart.pdf",
+        resourceLabel: "Open job intake and delivery flowchart (PDF)",
+        resourceNote: "Follow a job from the request email and student-lead Planner entry through assignment, production, Task chat, approval, delivery, and closeout. The flowchart links to meeting checklists, templates, Planner, and project files. Use the interactive version for hover highlighting.",
+        additionalResources: [{ label: "Open interactive flowchart", href: "/resources/onboarding/digital-corps-flow-chart.html" }],
+        searchTerms: ["job request", "intake", "workflow", "Planner", "Task chat", "project files", "templates", "delivery"],
+      }),
       skill(ONBOARDING, "Training & Skill Building", "on-files", "File Organization Guide", { href: "/resources/onboarding/file-organization-guide.pdf" }),
       skill(ONBOARDING, "Training & Skill Building", "on-planner", "Use MS Teams Planner", { href: "https://youtu.be/r3dpzqttDuA" }),
       skill(ONBOARDING, "Training & Skill Building", "on-hours", "Enter Submitted Payroll Hours", { href: "/resources/onboarding/enter-work-hours-steps.docx", searchTerms: ["e-services", "student employment", "timesheet"] }),

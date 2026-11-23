@@ -93,8 +93,8 @@ test("supplied camera guides have distinct Photography IDs, companion PDFs, and 
   assert.match(findSkill("cc-photography-skills-guide").resourceNote, /do not automatically award badges/i);
 });
 
-test("camera resource additions preserve all 90 existing tutorial IDs and their progress references", () => {
-  const addedIds = new Set(["cc-camera-orientation", "cc-photography-skills-guide", "cc-camera-checkout"]);
+test("catalog additions preserve all 90 existing tutorial IDs and their progress references", () => {
+  const addedIds = new Set(["cc-camera-orientation", "cc-photography-skills-guide", "cc-camera-checkout", "on-job-intake-delivery"]);
   const existingIds = allSkills.filter((item) => !addedIds.has(item.id)).map((item) => item.id).sort();
   assert.equal(existingIds.length, 90);
   // Snapshot of stable IDs before the two camera guides; progress, endorsements,
@@ -102,7 +102,7 @@ test("camera resource additions preserve all 90 existing tutorial IDs and their 
   assert.equal(
     createHash("sha256").update(existingIds.join("\n")).digest("hex"),
     "bad98c2e8f0c8b9042b7410c638490b28a36180e5b06716be33421ac034ee9f2",
-    "Do not remove or rename an existing tutorial when adding camera guides",
+    "Do not remove or rename an existing tutorial when adding new guides",
   );
 });
 

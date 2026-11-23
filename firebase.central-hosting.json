@@ -7,6 +7,13 @@
       "**/.*",
       "**/node_modules/**"
     ],
+    "redirects": [
+      {
+        "source": "/resources/onboarding/setting-up-a-project-guide.pdf",
+        "destination": "/resources/onboarding/digital-corps-flow-chart.pdf",
+        "type": 301
+      }
+    ],
     "rewrites": [
       {
         "source": "**",
